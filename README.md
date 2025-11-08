@@ -1,5 +1,5 @@
 # Chemistry Simplifier
-# The package to process rock chemical maps of any micro-analysis technique as dimensionally reduced flat images in RGB that maximise the original images content.
+# The package to process rock chemical maps as dimensionally reduced flat images in RGB while maximing the original images content of any micro-analysis technique.
 
 **Version**: 1 (beta)  
 **Author**: Dr Marco Acevedo Z. (maaz.geologia@gmail.com)  
@@ -12,16 +12,20 @@
 
 ## 📖 Overview
 
-Chemistry simplifier allows geoscientists and researchers to process full resolution micro-analysis maps (e.g., intensity from X-ray lines, mass spectrometry analytes) of any laboratory instrument into representation images using linear and non-linear dimensionality reduction. The available methods are Principal component analysis (PCA), the Uniform Manifold Approximation and Projection (UMAP), and the Symmetrical deep sparse autoencoder (DSA) neural network. 
+Chemistry simplifier allows researchers to do pixel-based image analysis of full resolution micro-analysis maps (e.g., intensity from X-ray lines, mass spectrometry analytes) of any laboratory instrument into representation images using linear and non-linear dimensionality reduction. The available methods are Principal component analysis (PCA), the Uniform Manifold Approximation and Projection (UMAP), and the Symmetrical deep sparse autoencoder (DSA) neural network. The data-driven approach does not demand thinking on the input as much as reduction process parametrisation. 
 
-Colourful image outputs are rapidly produced and are much simpler to understand than the separate original inputs since they are richer in information (texture). They are also friendlier for image segmentation with [QuPath](https://qupath.github.io/) ([Bankhead et al., 2017](https://www.nature.com/articles/s41598-017-17204-5)) using the [pixel classifier](https://qupath.readthedocs.io/en/stable/docs/tutorials/pixel_classification.html) tool. 
-
-The data-driven approach does not require extensive thinking on what image inputs would be more useful to run the reduction process with PCA being more robust to noisy inputs than DSA. UMAP is still in testing.
+Colourful image outputs are rapidly produced and are much simpler to understand than the separate original inputs since they are richer in information (texture). We call them pseudo-phase maps and they also are friendlier for image segmentation with [QuPath](https://qupath.github.io/) ([Bankhead et al., 2017](https://www.nature.com/articles/s41598-017-17204-5)) using the [pixel classifier](https://qupath.readthedocs.io/en/stable/docs/tutorials/pixel_classification.html) tool. 
 
 Locally, the output intermediate/final montages are saved in a structured folder sequence for each trial/tag combination (see interface). All processing metadata is recorded for potential future documentation in research papers. 
 
 <img width=100% height=100% alt="Image" src="https://github.com/user-attachments/assets/be17dff8-6783-40f1-ac55-55009377d954" />
 
+
+In well-characterised samples, we demonstrated that:
+ - PCA and UMAP tends to focus more on mineralogy while DSA is attentive to compositional zonation within crystals
+ - PCA can be made to be more robust to noisy inputs than DSA (and UMAP)
+      
+   
 
 ---
 
@@ -33,8 +37,7 @@ Locally, the output intermediate/final montages are saved in a structured folder
 - **Image file parsing** to find your experiment in an input folder using [regular expressions](https://docs.python.org/3/library/re.html)
 - **Basic image processing** to adjust image contrast and flip input/outputs
 - **Central image stack menu** to select/edit data inputs and models
-- **Parametrisation menu** for adjusting DSA and UMAP
-- **Performance menu** to adjust pixel sampling and input (training) and output (prediction) image size
+- **Parametrisation and performance menus** for adjusting DSA and UMAP models, pixel sampling and input (training) and output (prediction) image size
    
 ### Adaptive Interface
 - **Grid design** - adapts to the window size
@@ -108,11 +111,11 @@ The current Chemistry simplifier version was demonstrated to work on Windows 11 
 ## Issues and future work
 
 - This is a beta version that will soon be improved with user feedback
-- If you are not familiar to coding but you have proposals/ideas, you are welcome to reach out. Under a scientific collaboration project, I could design, implement, and trial new Cube converter software options.
+- You are welcome to reach out and share your developing ideas with me. Under a scientific collaboration project, I could help you design, implement, and trial new Cube converter software options.
 - I had in mind:
-  - Using Bio-Formats, the software can support many more light microscopy light microscopy [formats](https://docs.openmicroscopy.org/bio-formats/5.8.2/supported-formats.html), e.g., CZI from Zeiss [AxioScan Geo](https://www.zeiss.com/microscopy/en/products/imaging-systems/axioscan-7.html) (Zeiss Microscopy)
-  - Implementing ray tracing using the Pipeline for optic-axis mapping (POAM) [(Acevedo Zamora et al., 2024)](https://onlinelibrary.wiley.com/doi/10.1111/jmi.13284)
--Support for Mac OS and Linux is out of my expertise
+  - Cloud implementation with more processing cores
+  - Trialling UMAP more extensively as it is also more computationally expensive to use a neighbour node graph model
+- Support for Mac OS and Linux 
 
 ## Citing Phase interpreter
 
