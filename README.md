@@ -51,7 +51,7 @@ The current Chemistry simplifier version was demonstrated to work on Windows 11 
 - **multiprocessing** (included with most Python installations) for parallel processing
 - **pickle** (included with most Python installations) for saving scalers/models
 - **Additional libraries**:
-  - `pyvips 3.0.0`* - for enabling extreme processing speed with image pyramid processing [link](https://github.com/libvips/pyvips)
+  - `pyvips 3.0.0`** - for enabling extreme processing speed with image pyramid processing [link](https://github.com/libvips/pyvips)
   - `umap-learn 0.5.9.post2` - for UMAP [link](https://umap-learn.readthedocs.io/en/latest/)
   - `numba 0.60.0` - for UMAP guts [link](https://numba.pydata.org/)
   - `torch 2.8.0+cu126` - for DSA [link](https://pytorch.org/get-started/locally/)
@@ -68,19 +68,7 @@ The current Chemistry simplifier version was demonstrated to work on Windows 11 
     hiddenimports=['numba.core.runtime', 'numba.core.registry'],
         
 - **pyvips requires internally defining the path to libvips binaries (Windows DLL) in your PC. I downloaded the folder from [link](https://github.com/libvips/build-win64-mxe/releases/tag/v8.16.0) and unzipped to 'c:/vips-dev-8.16/bin'
-- ***javabridge will require a hacky manual modification to work properly:  
-  Within ..\<your-environment-name>\Lib\site-packages\javabridge\locate.py > find_javahome()  
-  Change line 76 original line: 
 
-      java_path = os.path.join(app_path, 'java')
-  
-  to
-
-      java_path = os.path.join(app_path, '_internal/jdk_folder_in_bundle')
-  
-  This is required for adopting what was written in the "main.spec" description and is provided to pyinstaller during compilation.  
-
-I acknowledge that most users will not have a VS200 slide scanner. Two laboratories within Queensland already have the acquisition routines required ([CARF](https://www.qut.edu.au/research/why-qut/infrastructure/central-analytical-research-facility), [Centre for Microscopy and Microanalysis](https://cmm.centre.uq.edu.au/olympus-vs-200-optical-microscope)). Under a scientific collaboration project, I could implement your own scanner for compatibility with Cube converter software.
 
 
 ---
@@ -120,7 +108,7 @@ I acknowledge that most users will not have a VS200 slide scanner. Two laborator
 ## Issues and future work
 
 - This is a beta version that will soon be improved with user feedback
-- If you are not familiar to coding but you have proposals/ideas, you are welcome to reach out. 
+- If you are not familiar to coding but you have proposals/ideas, you are welcome to reach out. Under a scientific collaboration project, I could design, implement, and trial new Cube converter software options.
 - I had in mind:
   - Using Bio-Formats, the software can support many more light microscopy light microscopy [formats](https://docs.openmicroscopy.org/bio-formats/5.8.2/supported-formats.html), e.g., CZI from Zeiss [AxioScan Geo](https://www.zeiss.com/microscopy/en/products/imaging-systems/axioscan-7.html) (Zeiss Microscopy)
   - Implementing ray tracing using the Pipeline for optic-axis mapping (POAM) [(Acevedo Zamora et al., 2024)](https://onlinelibrary.wiley.com/doi/10.1111/jmi.13284)
@@ -133,5 +121,5 @@ I acknowledge that most users will not have a VS200 slide scanner. Two laborator
   - Acevedo Zamora, M. (2024). Petrographic microscopy of geologic textural patterns and element-mineral associations with novel image analysis methods [Thesis by publication, Queensland University of Technology]. Brisbane. [https://eprints.qut.edu.au/248815/](https://eprints.qut.edu.au/248815/)
   - Burke, T. M., Kamber, B. S., & Rowlings, D. (2025). Microscopic investigation of incipient basalt breakdown in soils: implications for selecting products for enhanced rock weathering [Original Research]. Frontiers in Climate, Volume 7 - 2025. [https://doi.org/10.3389/fclim.2025.1572341](https://doi.org/10.3389/fclim.2025.1572341)
  
-  Thanks.
+  Thanks.  
   Marco
