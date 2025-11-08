@@ -18,12 +18,12 @@ Colourful image outputs are rapidly produced and are much simpler to understand 
 
 Locally, the output intermediate/final montages are saved in a structured folder sequence for each trial/tag combination (see interface). All processing metadata is recorded for potential future documentation in research papers. 
 
-<img width=100% height=100% alt="Image" src="https://github.com/user-attachments/assets/be17dff8-6783-40f1-ac55-55009377d954" />
+<img width=90% height=90% alt="Image" src="https://github.com/user-attachments/assets/be17dff8-6783-40f1-ac55-55009377d954" />
 
 
 In well-characterised samples, we demonstrated that:
  - PCA and UMAP tends to focus more on mineralogy while DSA is attentive to compositional zonation within crystals
- - PCA can be made to be more robust to noisy inputs than DSA (and UMAP)
+ - PCA is much faster and can more robust to noisy and/or artefact image inputs than DSA  
       
    
 
