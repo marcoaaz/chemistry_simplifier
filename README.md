@@ -123,6 +123,8 @@ The software depends on open-source, scientific citations and user feedback. The
 
   - Acevedo Zamora, M. A., Kamber, B. S., Jones, M. W. M., Schrank, C. E., Ryan, C. G., Howard, D. L., Paterson, D. J., Ubide, T., & Murphy, D. T. (2024). Tracking element-mineral associations with unsupervised learning and dimensionality reduction in chemical and optical image stacks of thin sections. Chemical Geology, 650, 121997. https://doi.org/10.1016/j.chemgeo.2024.121997
   - Acevedo Zamora, M. (2024). Petrographic microscopy of geologic textural patterns and element-mineral associations with novel image analysis methods [Thesis by publication, Queensland University of Technology]. Brisbane. https://eprints.qut.edu.au/248815/
+  - Ubide, T., Murphy, D. T., Emo, R. B., Jones, M. W. M., Acevedo Zamora, M. A., & Kamber, B. S. (2025). Early pyroxene crystallisation deep below mid-ocean ridges. Earth and Planetary Science Letters, 663, 119423. https://doi.org/10.1016/j.epsl.2025.119423 
+
  
 
  
