@@ -121,9 +121,10 @@ The current Chemistry simplifier version was demonstrated to work on Windows 11 
 
 The software depends on open-source, scientific citations and user feedback. The following research papers already have contributed to its evolution (directly or indirectly):
 
-  - Acevedo Zamora, M. A., & Kamber, B. S. (2023). Petrographic Microscopy with Ray Tracing and Segmentation from Multi-Angle Polarisation Whole-Slide Images. Minerals, 13(2), 156. [https://doi.org/10.3390/min13020156](https://doi.org/10.3390/min13020156)
-  - Acevedo Zamora, M. (2024). Petrographic microscopy of geologic textural patterns and element-mineral associations with novel image analysis methods [Thesis by publication, Queensland University of Technology]. Brisbane. [https://eprints.qut.edu.au/248815/](https://eprints.qut.edu.au/248815/)
-  - Burke, T. M., Kamber, B. S., & Rowlings, D. (2025). Microscopic investigation of incipient basalt breakdown in soils: implications for selecting products for enhanced rock weathering [Original Research]. Frontiers in Climate, Volume 7 - 2025. [https://doi.org/10.3389/fclim.2025.1572341](https://doi.org/10.3389/fclim.2025.1572341)
+  - Acevedo Zamora, M. A., Kamber, B. S., Jones, M. W. M., Schrank, C. E., Ryan, C. G., Howard, D. L., Paterson, D. J., Ubide, T., & Murphy, D. T. (2024). Tracking element-mineral associations with unsupervised learning and dimensionality reduction in chemical and optical image stacks of thin sections. Chemical Geology, 650, 121997. https://doi.org/10.1016/j.chemgeo.2024.121997
+  - Acevedo Zamora, M. (2024). Petrographic microscopy of geologic textural patterns and element-mineral associations with novel image analysis methods [Thesis by publication, Queensland University of Technology]. Brisbane. https://eprints.qut.edu.au/248815/
+ 
+
  
   Thanks.  
   Marco
