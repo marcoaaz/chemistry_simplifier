@@ -18,8 +18,9 @@ Colourful image outputs are rapidly produced and are much simpler to understand 
 
 Locally, the output intermediate/final montages are saved in a structured folder sequence for each trial/tag combination (see interface). All processing metadata is recorded for potential future documentation in research papers. 
 
-<img width=90% height=90% alt="Image" src="https://github.com/user-attachments/assets/be17dff8-6783-40f1-ac55-55009377d954" />
-
+<p align="center">
+ <img width=80% height=80% alt="Image" src="https://github.com/user-attachments/assets/090d49cf-8675-4e50-b521-ff6b78c250a5" />
+</p>
 
 With trialling and well-characterised samples, I demonstrated that:
  - PCA tends to focus on mineralogy while DSA is attentive to compositional zonation within crystals
