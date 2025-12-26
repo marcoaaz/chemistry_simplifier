@@ -87,8 +87,8 @@ def incremental_loading_DSA(fileList, scale, fraction, test_ratio):
 		indices = np.random.permutation(n_rows) #scrambling
 		sampling_idx = indices[:to_row]        
 					
-		image_xyz2 = image_xyz[sampling_idx, :] #selected data	
-		
+		image_xyz2 = image_xyz[sampling_idx, :] #selected data			
+
 		tile_arrays.append(image_xyz2)    
 	
 	#Sub-sample

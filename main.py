@@ -64,13 +64,15 @@ class Window(QMainWindow, Ui_MainWindow):
 		self.lineEdit_4.setText("tag_1")	
 		#radio buttons		
 		self.option2 = 0 #flip ud
-		self.option1 = 1 #recoloured
+		self.option1 = 0 #recoloured
 		self.option3 = 'linear' #input types
+		self.radioButton_6.setEnabled(False)
 		#checkboxes				
-		self.items_output1 = ['linear', 'log'] 
-		self.items_output2 = ['pca']		
+		self.items_output1 = ['linear'] #, 'log'
+		self.items_output2 = ['pca']
+		self.checkBox.setEnabled(False)		
 		#widget list
-		self.list_widget = []
+		self.list_widget = []		
 		#comboxes
 		self.setup_combobox_data()		
 		#execution button
@@ -97,7 +99,10 @@ class Window(QMainWindow, Ui_MainWindow):
 		#1
 		self.checkBox.stateChanged.connect(lambda state, item="linear": self.update_list(state, item))
 		self.checkBox_2.stateChanged.connect(lambda state, item="log": self.update_list(state, item))		
-		self.checkBox_3.stateChanged.connect(lambda state, item="original": self.update_list(state, item))		
+		self.checkBox_3.stateChanged.connect(lambda state, item="original": self.update_list(state, item))
+		
+		self.checkBox_2.stateChanged.connect(self._on_checkbox_state_changed2)
+
 		#2
 		self.checkBox_5.stateChanged.connect(lambda state, item="pca": self.update_list2(state, item))
 		self.checkBox_4.stateChanged.connect(lambda state, item="dsa": self.update_list2(state, item))
@@ -151,7 +156,14 @@ class Window(QMainWindow, Ui_MainWindow):
 		elif self.radioButton_2.isChecked():			
 			self.option1 = 0		
 		else:			
-			self.option1 = None			
+			self.option1 = None				
+	
+	def _on_checkbox_state_changed2(self, state):
+		if state == Qt.Unchecked:
+			self.radioButton_6.setEnabled(False)
+			self.radioButton_5.setChecked(True)			
+		else:			
+			self.radioButton_6.setEnabled(True)
 
 	#endregion
 
@@ -204,14 +216,11 @@ class Window(QMainWindow, Ui_MainWindow):
 		tag_combo = self.lineEdit_4.text()
 		input_type = self.option3 #linear, log		
 		type_list = self.items_output1
-
-		# try:
+		
 		workingDir = os.path.join(imageFolder, trial_name)	
 		outputFolder = os.path.join(workingDir, 'transformation_results\\'+  tag_combo)  		
 		mkdir2(workingDir) #keeper	
-		make_dir(outputFolder) #multiple
-		# except Exception as e:	
-		# 	QMessageBox.critical(self, 'Error', f'An unexpected error occurred: {e}')
+		make_dir(outputFolder) #multiple		
 
 		#Build list
 		fileList0, pattern = getFileList(imageFolder, input_expression, extension)
@@ -344,13 +353,13 @@ class Window(QMainWindow, Ui_MainWindow):
 		type_list = self.items_output1		
 		pctOut = self.doubleSpinBox_2.value() #percentile out in the input (for colour contrast)
 		filterSize = self.spinBox_6.value() #default=5; for smoothness
-		flip_ud = self.option2 #upside-down flip (=1 if ImageJ differs from Windows viewer)		
-		save_recoloured = self.option1 #time-consuming for each layer
+		flip_ud = self.option2 #flip upside-down (=1 if ImageJ differs from Windows viewer)		
+		save_recoloured = self.option1 #save chemical elements heatmap
 
 		#2		
 		tag_combo = self.lineEdit_4.text()
-		input_type = self.option3 #linear, log, 		
-		transform_list = self.items_output2 #pca, dsa, umap		
+		input_type = self.option3 #radio button: linear, log 		
+		transform_list = self.items_output2 #checkbox: pca, dsa, umap		
 		model_path_pca = self.lineEdit_8.text() #previously saved (use if same input list)
 		model_path_dsa = self.lineEdit_9.text() 
 		model_path_umap = self.lineEdit_10.text()
@@ -377,14 +386,10 @@ class Window(QMainWindow, Ui_MainWindow):
 		n_workers = self.spinBox_5.value() #half of available cores
 
 		#Default	
-		# try:			
 		workingDir = os.path.join(imageFolder, trial_name) #Ensure there is a folder when running	
 		outputFolder = os.path.join(workingDir, 'transformation_results\\'+  tag_combo)  		
 		mkdir2(workingDir) #keeper
-		mkdir2(outputFolder) #or empty with make_dir  	
-		# except Exception as e:
-		# 	QMessageBox.critical(self, 'Error', f'An unexpected error occurred: {e}')
-			
+		make_dir(outputFolder) #or empty with make_dir  			
 
 		chosen_table = qListWidget_list(self.listWidget, outputFolder)
 		n_layers_input = chosen_table.shape[0]
@@ -399,23 +404,49 @@ class Window(QMainWindow, Ui_MainWindow):
 		device = get_device() #'cpu', 'cuda:0'  
 		# device = torch.device("cpu") #forced
 		
+		#Pre-calculated models		
+		model_paths = [model_path_pca, model_path_umap, model_path_dsa]
+		boolean_list = [os.path.exists(path) for path in model_paths]		
+		true_indices = [i for i, x in enumerate(boolean_list) if x]
+		condition_models = any(boolean_list) #condition_pca | condition_umap | condition_dsa
+		condition_pca = boolean_list[0]
+		condition_umap = boolean_list[1]
+		condition_dsa = boolean_list[2]
+	
 		#Generate pyramids	
 		print('Generating pyramids..')	
-		_, _ = build_pyramids(chosen_table, type_list, tileSize, filterSize, pctOut, workingDir, save_recoloured, flip_ud)
-		#metadata, descriptiveStats
-		 	
-		#Retrieve pyvips process metadata					
-		metadataFile = os.path.join(workingDir, 'tileConfiguration.csv')   				
-		statsFile = os.path.join(workingDir, 'descriptiveStats.csv')
-		metadata = pd.read_csv(metadataFile)
-		descriptiveStats = pd.read_csv(statsFile)
+		if not condition_models:
+			print('Calculating histogram limits..')
+			_, _ = build_pyramids(chosen_table, type_list, tileSize, filterSize, 
+						 pctOut, workingDir, save_recoloured, flip_ud)
+			#metadata, descriptiveStats
 
-		#Learn about montage
-		metadata2 = metadata.loc[metadata["type"] == input_type, :]   
-		fileList = metadata2['filepath']		
+			statsFile = os.path.join(workingDir, 'descriptiveStats.csv')	
+		else:
+			#prior histogram limits
+			print('Loading prior histogram limits..')
+			model_path = model_paths[true_indices[0]] #first (assumming all within same Trial folder)
+			path1 = os.path.dirname(model_path)
+			path2 = os.path.dirname(path1)
+			workingDir_prior = os.path.dirname(path2)
+
+			_, _ = build_pyramids_prior(chosen_table, type_list, tileSize, filterSize, 
+							   workingDir_prior, workingDir, save_recoloured, flip_ud)
+
+			statsFile = os.path.join(workingDir_prior, 'descriptiveStats.csv')	
+
+		#Retrieve pyvips process metadata							
+		descriptiveStats = pd.read_csv(statsFile)
 		item1 = f"{input_type}_mean"
 		item2 = f"{input_type}_stddev"
 		scaler_input = descriptiveStats[[item1, item2]]	
+
+		metadataFile = os.path.join(workingDir, 'tileConfiguration.csv')   				
+		metadata = pd.read_csv(metadataFile)				
+		
+		#Learn about montage
+		metadata2 = metadata.loc[metadata["type"] == input_type, :]   
+		fileList = metadata2['filepath']		
 
 		imageHeight = metadata2.loc[metadata2['x'] == 0, :]['H'].sum()
 		imageWidth = metadata2.loc[metadata2['y'] == 0, :]['W'].sum()    
@@ -430,28 +461,88 @@ class Window(QMainWindow, Ui_MainWindow):
 		
 		#Load models
 		
-		#PCA
-		if 'pca' in transform_list:						
+		#Principal Component Analysis (PCA)
+		if 'pca' in transform_list:									
+			
+			#Destination directory
 			outputFolder2 = os.path.join(outputFolder, 'pca_tiles')   			
 			mkdir2(outputFolder2)			
-			
-			if not os.path.exists(model_path_pca):		    
-				print('PCA factorisation..')
+
+			if not condition_pca:		    
+				print('PCA factorisation..')			
+
 				modelPATH = incremental_PCA(fileList, scale, fraction_pca, scaler_input, outputFolder)  
 				
 			else:		
+				print('Loading PCA model..')				
+
+				#prior histogram limits
+				path1 = os.path.dirname(model_path_pca) #tag_1
+				path2 = os.path.dirname(path1) #transformation_results
+				path3 = os.path.dirname(path2) #trial
+				statsFile = os.path.join(path3, 'descriptiveStats.csv')#chosen_table must match
+				descriptiveStats = pd.read_csv(statsFile)
+				col1 = f"{input_type}_mean"
+				col2 = f"{input_type}_stddev"
+				scaler_input = descriptiveStats[[col1, col2]] #overwrite variable
+
 				modelPATH = model_path_pca 
 
 			print('PCA transformation..')
-			fileList2 = transform_tiles_pca(fileList, resolution, scaler_input, modelPATH, outputFolder2, n_workers)
-			stitch_crop_rescale(fileList2, tiles_across, outPct, outputFolder)   
+			fileList2 = transform_tiles_pca(fileList, resolution, scaler_input, modelPATH, 
+								   outputFolder2, n_workers)
+			
+			print('Stitching..')
+			if not condition_pca:			
+				stitch_crop_rescale(fileList2, tiles_across, outPct, outputFolder)   	 
+			else:
+				stitch_crop_rescale_prior(fileList2, tiles_across, modelPATH, outputFolder)   	 
 
-		#DSA		
+		#Uniform Manifold Approximation and Projection (UMAP)
+		if 'umap' in transform_list:		
+
+			#Destination directory				
+			outputFolder2 = os.path.join(outputFolder, 'umap_tiles')   			
+			mkdir2(outputFolder2)
+			
+			if not condition_umap:	
+				print('UMAP fitting..')		
+
+				_, model_path = incremental_loading_UMAP(fileList, scale, fraction_umap, scaler_input,
+										 n_neighbours, min_dist, outputFolder)  
+				
+				modelPATH = model_path
+			else:	
+				print('Loading UMAP model..')				
+
+				#prior histogram limits
+				path1 = os.path.dirname(model_path_umap)
+				path2 = os.path.dirname(path1)
+				path3 = os.path.dirname(path2)
+				statsFile = os.path.join(path3, 'descriptiveStats.csv')#chosen_table must match
+				descriptiveStats = pd.read_csv(statsFile)
+				col1 = f"{input_type}_mean"
+				col2 = f"{input_type}_stddev"
+				scaler_input = descriptiveStats[[col1, col2]] #overwrite variable
+
+				modelPATH = model_path_umap 
+
+			print('UMAP transformation..')
+			fileList2 = transform_tiles_umap(fileList, resolution, scaler_input, modelPATH, 
+									outputFolder2, n_workers_umap)
+			
+			print('Stitching..')
+			if not condition_umap:			
+				stitch_crop_rescale(fileList2, tiles_across, outPct, outputFolder)   	 
+			else:
+				stitch_crop_rescale_prior(fileList2, tiles_across, modelPATH, outputFolder)   
+		
+		#Deep sparse autoencoder (DSA)		
 		if 'dsa' in transform_list:			
 			outputFolder2 = os.path.join(outputFolder, 'dsa_tiles')               			
 			mkdir2(outputFolder2)			
 			
-			if not os.path.exists(model_path_dsa):    
+			if not condition_dsa:    
 				print('DSA training..')				
 				dataset_list = incremental_loading_DSA(fileList, scale, fraction_dsa, test_ratio)    
 
@@ -465,27 +556,15 @@ class Window(QMainWindow, Ui_MainWindow):
 			print('DSA transformation..')
 			fileList2 = transform_tiles_dsa(fileList, resolution, modelPATH, network_nodes, 
 											BATCH_SIZE_pred, device, n_workers_dsa, outputFolder2)
-			stitch_crop_rescale(fileList2, tiles_across, outPct, outputFolder)   
-
-		#UMAP
-		if 'umap' in transform_list:						
-			outputFolder2 = os.path.join(outputFolder, 'umap_tiles')   			
-			mkdir2(outputFolder2)
-
 			
-			if not os.path.exists(model_path_umap):	
-				print('UMAP fitting..')		    
-				_, model_path = incremental_loading_UMAP(fileList, scale, fraction_umap, scaler_input,
-										 n_neighbours, min_dist, outputFolder)  
-				
-				modelPATH = model_path
-			else:		
-				modelPATH = model_path_umap 
+			print('Stitching..')
+			if not condition_dsa:			
+				stitch_crop_rescale(fileList2, tiles_across, outPct, outputFolder)   	 
+			else:
+				stitch_crop_rescale_prior(fileList2, tiles_across, modelPATH, outputFolder)   
+			
 
-			print('UMAP transformation..')
-			fileList2 = transform_tiles_umap(fileList, resolution, scaler_input, modelPATH, 
-									outputFolder2, n_workers_umap)
-			stitch_crop_rescale(fileList2, tiles_across, outPct, outputFolder)  
+		print('Finished.')
 
 	#endregion	
 
@@ -522,7 +601,7 @@ if __name__ == "__main__":
 	#relative paths
 	from helperFunctions.mkdir_options import make_dir, mkdir2	
 	from main_functions import parse_system_info, get_device
-	from functions_pyramids import qListWidget_list, getFileList, build_filePaths, build_pyramids, predict_fileSize, stitch_crop_rescale
+	from functions_pyramids import qListWidget_list, getFileList, build_filePaths, build_pyramids, build_pyramids_prior, predict_fileSize, stitch_crop_rescale, stitch_crop_rescale_prior
 	from functions_PCA import incremental_PCA, transform_tiles_pca
 	from functions_DSA import incremental_loading_DSA, incremental_training_DSA, transform_tiles_dsa    	
 	from functions_UMAP import incremental_loading_UMAP, transform_tiles_umap

@@ -54,7 +54,7 @@ def incremental_PCA(fileList, scale, fraction, scaler_input, outputFolder):
 	
 	for file in fileList:
    
-		image_temp = pyvips.Image.new_from_file(file)		
+		image_temp = pyvips.Image.new_from_file(file) #tile stack
 
 		#Downsampling
 		image_temp = image_temp.resize(scale_factor) #kernel=pyvips.Kernel.LANCZOS3 default
@@ -71,14 +71,14 @@ def incremental_PCA(fileList, scale, fraction, scaler_input, outputFolder):
 		sampling_idx = indices[:to_row]        
 					
 		image_xyz2 = image_xyz[sampling_idx, :]#selected data			
-
+		
 		#Standardising (z-score)
 		n_rows2 = image_xyz2.shape[0]
 		mean_temp = scaler_input.iloc[:, 0].to_numpy().reshape((1, -1)) #row		
 		std_temp = scaler_input.iloc[:, 1].to_numpy().reshape((1, -1))				
 		mean_temp2 = np.tile(mean_temp, (n_rows2, 1) )						
 		image_xyz3 = (image_xyz2 - mean_temp2) / std_temp #broadcasting
-
+		
 		ipca.partial_fit(image_xyz3)    
 
 	#Save model
