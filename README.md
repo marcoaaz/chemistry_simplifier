@@ -14,17 +14,17 @@
 
 Chemistry simplifier allows researchers to do pixel-based image analysis of full resolution micro-analysis maps (e.g., intensity from X-ray lines, mass spectrometry analytes) of any laboratory instrument into representation images using linear and non-linear dimensionality reduction. The available methods are Principal component analysis (PCA), the Uniform Manifold Approximation and Projection (UMAP), and the Symmetrical deep sparse autoencoder (DSA) neural network. The data-driven approach does not demand thinking on the input as much as reduction process parametrisation. 
 
-Colourful image outputs are rapidly produced and are much simpler to understand than the separate original inputs since they are richer in information (texture). We call them pseudo-phase maps and they also are friendlier for image segmentation with [QuPath](https://qupath.github.io/) ([Bankhead et al., 2017](https://www.nature.com/articles/s41598-017-17204-5)) using the [pixel classifier](https://qupath.readthedocs.io/en/stable/docs/tutorials/pixel_classification.html) tool. 
+Colourful image outputs are rapidly produced and are much simpler to understand than the separate original inputs since they are richer in information (texture). We call them pseudo-phase maps and they can be friendlier for image segmentation with pixel classification in [QuPath](https://qupath.github.io/) ([Bankhead et al., 2017](https://www.nature.com/articles/s41598-017-17204-5)), see [pixel classifier](https://qupath.readthedocs.io/en/stable/docs/tutorials/pixel_classification.html) tool. 
 
 Locally, the output intermediate/final montages are saved in a structured folder sequence for each trial/tag combination (see interface). All processing metadata is recorded for potential future documentation in research papers. 
 
 <img width=90% height=90% alt="Image" src="https://github.com/user-attachments/assets/be17dff8-6783-40f1-ac55-55009377d954" />
 
 
-In well-characterised samples, we demonstrated that:
- - PCA and UMAP tends to focus more on mineralogy while DSA is attentive to compositional zonation within crystals
+With trialling and well-characterised samples, I demonstrated that:
+ - PCA tends to focus on mineralogy while DSA is attentive to compositional zonation within crystals
  - PCA is much faster and can more robust to noisy and/or artefact image inputs than DSA  
-      
+ - UMAP is good at distinguishing mineralogy and superior at denoising the output (grain/zone boundaries) than PCA because it is a non-linear method
    
 
 ---
