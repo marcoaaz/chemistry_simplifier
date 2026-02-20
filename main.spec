@@ -10,6 +10,7 @@ a = Analysis(
         ("c:/vips-dev-8.16/bin", "vips"),                
         ("E:/Alienware_March 22/current work/00-new code May_22/dimReduction_v2/chemSimplifier3/Lib/site-packages/llvmlite/*", "llvmlite"),        
         ("E:/Alienware_March 22/current work/00-new code May_22/dimReduction_v2/chemSimplifier3/Lib/site-packages/llvmlite/binding/*", "llvmlite/binding"),
+        ("fontlist-v390.json", "."),
         ],
     hiddenimports=['numba.core.runtime', 'numba.core.registry'],
     hookspath=[],

@@ -25,7 +25,13 @@ import time
 from tqdm import tqdm
 
 import numpy as np
+
 import matplotlib
+#look for the cache in the EXE's temporary folder
+if getattr(sys, 'frozen', False):    
+    os.environ['MPLCONFIGDIR'] = sys._MEIPASS
+else:    
+    pass #runnint in editor
 import matplotlib.pyplot as plt 
 matplotlib.style.use('ggplot')
 

@@ -12,6 +12,7 @@ import os
 import sys
 import time
 from tqdm import tqdm
+from multiprocessing import Pool
 
 import numpy as np
 
@@ -31,11 +32,9 @@ if callable(add_dll_dir):
 else:
 	os.environ['PATH'] = os.pathsep.join((vip_dlls, os.environ['PATH']))
 
-
-import joblib #for saving UMAP model
 import umap
-
-from multiprocessing import Pool
+import joblib #for saving UMAP model
+from functions_pyramids import centering_operation, standardising_operation
 
 #VIPS
 add_dll_dir = getattr(os, 'add_dll_directory', None) #Windows=True
@@ -57,7 +56,7 @@ import pyvips
 # print("vips version: " + str(pyvips.version(0))+"."+str(pyvips.version(1))+"."+str(pyvips.version(2)))
 
 
-def incremental_loading_UMAP(fileList, scale, fraction, scaler_input, neighbors_input, min_dist_input, outputFolder):
+def incremental_loading_UMAP(fileList, scale, fraction, scaler_input, scaling_type, neighbors_input, min_dist_input, outputFolder):
 
 	#Default
 	n_channels = 3
@@ -88,12 +87,10 @@ def incremental_loading_UMAP(fileList, scale, fraction, scaler_input, neighbors_
 					
 		image_xyz2 = image_xyz[sampling_idx, :]#selected data
 
-		#Standardising (z-score)
-		n_rows2 = image_xyz2.shape[0]
-		mean_temp = scaler_input.iloc[:, 0].to_numpy().reshape((1, -1)) #row		
-		std_temp = scaler_input.iloc[:, 1].to_numpy().reshape((1, -1))				
-		mean_temp2 = np.tile(mean_temp, (n_rows2, 1) )						
-		image_xyz3 = (image_xyz2 - mean_temp2) / std_temp #broadcasting		
+		if scaling_type == 'centering':
+			image_xyz3 = centering_operation(image_xyz2, scaler_input) #original code
+		elif scaling_type == 'standardising':
+			image_xyz3 = standardising_operation(image_xyz2, scaler_input)	
 
 		tile_arrays.append(image_xyz3)    
     
@@ -119,13 +116,13 @@ def incremental_loading_UMAP(fileList, scale, fraction, scaler_input, neighbors_
 def _unpack_and_call(args):
 		return umap_section(*args)
 
-def transform_tiles_umap(fileList, resolution, scaler_input, model_path, outputFolder2, n_cores):		
+def transform_tiles_umap(fileList, resolution, scaler_input, scaling_type, model_path, outputFolder2, n_cores):		
 	
 	umap_model = joblib.load(model_path)
 	
 	#Transform each tile
 	total_len = len(fileList)
-	args = ((file, resolution, scaler_input, umap_model, outputFolder2)
+	args = ((file, resolution, scaler_input, scaling_type, umap_model, outputFolder2)
 		 for file in fileList)		
 	
 	with Pool(processes= n_cores) as pool: # imap for incremental results        
@@ -136,7 +133,7 @@ def transform_tiles_umap(fileList, resolution, scaler_input, model_path, outputF
 
 	return fileList2
 
-def umap_section(file, resolution, scaler_input, umap_model, outputFolder2):
+def umap_section(file, resolution, scaler_input, scaling_type, umap_model, outputFolder2):
 	#Default
 	n_channels = 3
 	resolution_factor = 1/resolution
@@ -152,12 +149,10 @@ def umap_section(file, resolution, scaler_input, umap_model, outputFolder2):
 	dim_shape = image_np.shape  
 	image_xyz2 = np.reshape(image_np, (-1, dim_shape[2])) #39 channels  
 
-	#Standardising (z-score)
-	n_rows2 = image_xyz2.shape[0]
-	mean_temp = scaler_input.iloc[:, 0].to_numpy().reshape((1, -1)) #row		
-	std_temp = scaler_input.iloc[:, 1].to_numpy().reshape((1, -1))				
-	mean_temp2 = np.tile(mean_temp, (n_rows2, 1) )						
-	image_xyz3 = (image_xyz2 - mean_temp2) / std_temp #broadcasting                      		
+	if scaling_type == 'centering':
+		image_xyz3 = centering_operation(image_xyz2, scaler_input) #original code
+	elif scaling_type == 'standardising':
+		image_xyz3 = standardising_operation(image_xyz2, scaler_input)	                    		
 
 	#Transform
 	image_features = umap_model.transform(image_xyz3)

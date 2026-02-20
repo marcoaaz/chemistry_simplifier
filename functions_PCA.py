@@ -14,12 +14,13 @@ resizing interpolation used: https://mazzo.li/posts/lanczos.html
 import os    
 import sys
 import pickle
+import multiprocessing
 
 import numpy as np
 import pandas as pd   
 from sklearn.decomposition import IncrementalPCA
+from functions_pyramids import centering_operation, standardising_operation
 
-import multiprocessing
 
 #VIPS
 add_dll_dir = getattr(os, 'add_dll_directory', None) #Windows=True
@@ -41,7 +42,7 @@ import pyvips
 # print("vips version: " + str(pyvips.version(0))+"."+str(pyvips.version(1))+"."+str(pyvips.version(2)))
 
 
-def incremental_PCA(fileList, scale, fraction, scaler_input, outputFolder):
+def incremental_PCA(fileList, scale, fraction, scaler_input, scaling_type, outputFolder):
 
 	#Default
 	n_channels = 3
@@ -72,12 +73,10 @@ def incremental_PCA(fileList, scale, fraction, scaler_input, outputFolder):
 					
 		image_xyz2 = image_xyz[sampling_idx, :]#selected data			
 		
-		#Standardising (z-score)
-		n_rows2 = image_xyz2.shape[0]
-		mean_temp = scaler_input.iloc[:, 0].to_numpy().reshape((1, -1)) #row		
-		std_temp = scaler_input.iloc[:, 1].to_numpy().reshape((1, -1))				
-		mean_temp2 = np.tile(mean_temp, (n_rows2, 1) )						
-		image_xyz3 = (image_xyz2 - mean_temp2) / std_temp #broadcasting
+		if scaling_type == 'centering':
+			image_xyz3 = centering_operation(image_xyz2, scaler_input) #original code
+		elif scaling_type == 'standardising':
+			image_xyz3 = standardising_operation(image_xyz2, scaler_input)
 		
 		ipca.partial_fit(image_xyz3)    
 
@@ -88,13 +87,13 @@ def incremental_PCA(fileList, scale, fraction, scaler_input, outputFolder):
 
 	return model_path           
 
-def transform_tiles_pca(fileList, resolution, scaler_input, model_path, outputFolder2, n_cores):	
+def transform_tiles_pca(fileList, resolution, scaler_input, scaling_type, model_path, outputFolder2, n_cores):	
 
 	with open(model_path, 'rb') as file:
 		ipca = pickle.load(file)    
 
 	#Transform each tile
-	args = ((file, resolution, scaler_input, ipca, outputFolder2)
+	args = ((file, resolution, scaler_input, scaling_type, ipca, outputFolder2)
 		 for file in fileList)		
 	
 	pool = multiprocessing.Pool(processes=n_cores)	
@@ -102,7 +101,7 @@ def transform_tiles_pca(fileList, resolution, scaler_input, model_path, outputFo
 
 	return fileList2
 
-def pca_section(file, resolution, scaler_input, ipca, outputFolder2):
+def pca_section(file, resolution, scaler_input, scaling_type, ipca, outputFolder2):
 	#Default
 	n_channels = 3
 	resolution_factor = 1/resolution
@@ -118,12 +117,12 @@ def pca_section(file, resolution, scaler_input, ipca, outputFolder2):
 	dim_shape = image_np.shape  
 	image_xyz2 = np.reshape(image_np, (-1, dim_shape[2])) #39 channels                        		
 
+	
 	#Standardising (z-score)
-	n_rows2 = image_xyz2.shape[0]
-	mean_temp = scaler_input.iloc[:, 0].to_numpy().reshape((1, -1)) #row		
-	std_temp = scaler_input.iloc[:, 1].to_numpy().reshape((1, -1))				
-	mean_temp2 = np.tile(mean_temp, (n_rows2, 1) )						
-	image_xyz3 = (image_xyz2 - mean_temp2) / std_temp #broadcasting
+	if scaling_type == 'centering':
+		image_xyz3 = centering_operation(image_xyz2, scaler_input) #original code
+	elif scaling_type == 'standardising':
+		image_xyz3 = standardising_operation(image_xyz2, scaler_input)	
 
 	#Transform
 	image_features = ipca.transform(image_xyz3)

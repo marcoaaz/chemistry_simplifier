@@ -213,27 +213,46 @@ def find_P_thresholds(input_channel, percentOut, bit_precision):
 	return th_low_input, th_high_input
 
 def channel_rescaled(input_channel, min_val, max_val, th_low_input, th_high_input):  
+	#Min-Max Scaling (normalization)
+	#Note: Use when the distribution is not normal and you need to preserve data relationships.
 	#Following: https://au.mathworks.com/help/matlab/ref/rescale.html
-	#Note: capped and uint8 (useful for std, maxIndex, minIndex, PCA)	 
-	  
-	# min_val = 0 #default
-	# max_val = 255
-
+		
 	#Capping
 	input_channel = (input_channel > th_high_input).ifthenelse(th_high_input, input_channel) #true, false
 	input_channel = (input_channel < th_low_input).ifthenelse(th_low_input, input_channel)
 
 	#Rescaling
-	output_channel = min_val + (input_channel - th_low_input) * ( (max_val - min_val) / (th_high_input - th_low_input) ) 			
-	# output_channel = image_rs3.cast("uchar") #uint8   	
+	output_channel = min_val + (input_channel - th_low_input) * ( (max_val - min_val) / (th_high_input - th_low_input) ) 				
 
 	return output_channel   
 
-def channel_standardise(input_channel, mean_temp, std_temp):
-	
+
+def channel_standardise(input_channel, mean_temp, std_temp):	
 	output_channel = (input_channel - mean_temp) / std_temp #z-score		
 
 	return output_channel  
+
+def standardising_operation(image_xyz2, scaler_input):
+	#Z-score Normalisation (standardisation)
+	#Use for algorithms that assume a normal distribution (e.g., Logistic Regression, SVM, Linear Regression).
+	
+	n_rows2 = image_xyz2.shape[0]	
+	mean_temp = scaler_input.iloc[:, 0].to_numpy().reshape((1, -1)) #row		
+	mean_temp2 = np.tile(mean_temp, (n_rows2, 1) )		
+	std_temp = scaler_input.iloc[:, 1].to_numpy().reshape((1, -1))				
+	image_xyz3 = (image_xyz2 - mean_temp2) / std_temp #broadcasting
+
+	return image_xyz3
+
+def centering_operation(image_xyz2, scaler_input):
+	#Centering around zero
+
+	n_rows2 = image_xyz2.shape[0]
+	mean_temp = scaler_input.iloc[:, 0].to_numpy().reshape((1, -1)) #row		
+	mean_temp2 = np.tile(mean_temp, (n_rows2, 1) )			
+	image_xyz3 = (image_xyz2 - mean_temp2)
+
+	return image_xyz3
 
 #Similar to vsiFormatter > ray_tracing_module.py
 def img_rescaled(image_cropped, percentOut):	
@@ -427,7 +446,7 @@ def stitch_crop_rescale_prior(fileList2, tiles_across, modelPATH, outputFolder):
 	pattern = re.compile(r".*\\(\w+)_tiles")
 	str1 = os.path.dirname(fileList2[0])
 	match = pattern.match(str1)
-	str2 = match.group(1)
+	str2 = match.group(1) #pca, dsa, umap
 
 	#Stitching
 	tiles = []
@@ -564,7 +583,7 @@ def save_transformed_stack(stack_layers_log, type, tileSize, flip_ud, destDir):
 					skip_blanks=-1, background=0, 
 					depth='one', overlap=0, tile_size= tileSize, 
 					layout='dz') #Tile overlap in pixels*2  
-	
+
 def build_pyramids(chosen_table, type_list, tileSize, filterSize, pctOut, destDir, save_recoloured, flip_ud):
 		
 	fileList0 = chosen_table["path"]
@@ -628,7 +647,7 @@ def build_pyramids(chosen_table, type_list, tileSize, filterSize, pctOut, destDi
 				
 				#Finding percentiles, capping and stretching image histogram bottom/top                
 				th_low_input, th_high_input = find_P_thresholds(image_temp, pctOut, 16)		
-				channel_positive2 = channel_rescaled(image_temp, 0, 1, th_low_input, th_high_input)	                     
+				channel_positive2 = channel_rescaled(image_temp, 0, 1, th_low_input, th_high_input) #normalization	                     
 				image_med = channel_positive2.median(filterSize) #median filter   
 
 				log_list.append(image_med) #for stack
@@ -638,7 +657,7 @@ def build_pyramids(chosen_table, type_list, tileSize, filterSize, pctOut, destDi
 
 				#Finding percentiles, capping and stretching image histogram bottom/top
 				th_low_input, th_high_input = find_P_thresholds(image_temp, pctOut, 16)		
-				channel_positive2 = channel_rescaled(image_temp, 0, 1, th_low_input, th_high_input)	                     
+				channel_positive2 = channel_rescaled(image_temp, 0, 1, th_low_input, th_high_input)	#normalise                     
 				image_med = channel_positive2.median(filterSize) #median filter   
 
 				linear_list.append(image_med) #for stack
@@ -763,21 +782,23 @@ def build_pyramids_prior(chosen_table, type_list, tileSize, filterSize, workingD
 			th_low_input = scaler_input[1]
 			th_high_input = scaler_input[2]
 
-			if type == "log":  #natural log() 
-				image_positive = 1 + image - min_temp
+			image_difference = image - min_temp
+
+			if type == "log":  #natural log() 				
+				image_positive = 1 + (image_difference < 0).ifthenelse(0, image_difference)
 				image_temp = image_positive.log() 
 				
 				#Capping and stretching image histogram bottom/top                                
-				channel_positive2 = channel_rescaled(image_temp, 0, 1, th_low_input, th_high_input)	                     
+				channel_positive2 = channel_rescaled(image_temp, 0, 1, th_low_input, th_high_input)	#normalise                     
 				image_med = channel_positive2.median(filterSize) #median filter   
 
 				log_list.append(image_med) #for stack
 
 			elif type == "linear":
-				image_temp = image - min_temp				
+				image_temp = image_difference				
 
 				#Capping and stretching image histogram bottom/top                
-				channel_positive2 = channel_rescaled(image_temp, 0, 1, th_low_input, th_high_input)	                     
+				channel_positive2 = channel_rescaled(image_temp, 0, 1, th_low_input, th_high_input)	#normalise                     
 				image_med = channel_positive2.median(filterSize) #median filter   
 
 				linear_list.append(image_med) #for stack

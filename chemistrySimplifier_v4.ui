@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1476</width>
-    <height>1000</height>
+    <width>1563</width>
+    <height>991</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -276,6 +276,7 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
                     <property name="font">
                      <font>
                       <family>Arial</family>
+                      <pointsize>12</pointsize>
                      </font>
                     </property>
                     <property name="text">
@@ -342,493 +343,546 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
                   </item>
                  </layout>
                 </item>
+                <item>
+                 <widget class="QFrame" name="frame_2">
+                  <property name="font">
+                   <font>
+                    <family>Arial</family>
+                   </font>
+                  </property>
+                  <property name="frameShape">
+                   <enum>QFrame::StyledPanel</enum>
+                  </property>
+                  <property name="frameShadow">
+                   <enum>QFrame::Raised</enum>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_6">
+                   <item row="1" column="0">
+                    <layout class="QVBoxLayout" name="verticalLayout_15">
+                     <item>
+                      <widget class="QLabel" name="label_56">
+                       <property name="font">
+                        <font>
+                         <family>Arial</family>
+                         <pointsize>16</pointsize>
+                         <italic>true</italic>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Input processing</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_2">
+                       <item>
+                        <widget class="QLabel" name="label_55">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>16</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Tile size</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QComboBox" name="comboBox_3">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                          </font>
+                         </property>
+                         <property name="editable">
+                          <bool>false</bool>
+                         </property>
+                         <property name="currentIndex">
+                          <number>2</number>
+                         </property>
+                         <item>
+                          <property name="text">
+                           <string>128</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>256</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>512</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>1024</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>2048</string>
+                          </property>
+                         </item>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="label_48">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>12</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>pixels</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_22">
+                       <item>
+                        <widget class="QLabel" name="label_5">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>16</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Pixel transformation</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <layout class="QVBoxLayout" name="verticalLayout_4">
+                         <item>
+                          <widget class="QCheckBox" name="checkBox">
+                           <property name="font">
+                            <font>
+                             <family>Arial</family>
+                             <pointsize>12</pointsize>
+                            </font>
+                           </property>
+                           <property name="text">
+                            <string>Linear</string>
+                           </property>
+                           <property name="checked">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QCheckBox" name="checkBox_2">
+                           <property name="font">
+                            <font>
+                             <family>Arial</family>
+                             <pointsize>12</pointsize>
+                            </font>
+                           </property>
+                           <property name="text">
+                            <string>Natural logarithm</string>
+                           </property>
+                           <property name="checked">
+                            <bool>false</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QCheckBox" name="checkBox_3">
+                           <property name="font">
+                            <font>
+                             <family>Arial</family>
+                             <pointsize>12</pointsize>
+                            </font>
+                           </property>
+                           <property name="text">
+                            <string>Original bit depth</string>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_21">
+                       <item>
+                        <widget class="QLabel" name="label_6">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>16</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Brightness capping 1</string>
+                         </property>
+                         <property name="wordWrap">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                          </font>
+                         </property>
+                         <property name="maximum">
+                          <double>20.000000000000000</double>
+                         </property>
+                         <property name="singleStep">
+                          <double>0.100000000000000</double>
+                         </property>
+                         <property name="value">
+                          <double>0.500000000000000</double>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="label_40">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>12</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>% percentile</string>
+                         </property>
+                         <property name="wordWrap">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_14">
+                       <item>
+                        <widget class="QLabel" name="label_7">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>16</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Median filtering</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QSpinBox" name="spinBox_6">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                          </font>
+                         </property>
+                         <property name="minimum">
+                          <number>1</number>
+                         </property>
+                         <property name="maximum">
+                          <number>16</number>
+                         </property>
+                         <property name="value">
+                          <number>3</number>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="label_39">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>12</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>kernel size</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_36">
+                       <item>
+                        <widget class="QLabel" name="label_13">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>16</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Normalisation</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <layout class="QHBoxLayout" name="horizontalLayout_41">
+                         <item>
+                          <widget class="QRadioButton" name="radioButton_7">
+                           <property name="font">
+                            <font>
+                             <family>Arial</family>
+                             <pointsize>12</pointsize>
+                            </font>
+                           </property>
+                           <property name="text">
+                            <string>Standardising</string>
+                           </property>
+                           <property name="checked">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QRadioButton" name="radioButton_8">
+                           <property name="font">
+                            <font>
+                             <family>Arial</family>
+                             <pointsize>12</pointsize>
+                            </font>
+                           </property>
+                           <property name="text">
+                            <string>Centering</string>
+                           </property>
+                           <property name="checked">
+                            <bool>false</bool>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                      </layout>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QFrame" name="frame_8">
+                  <property name="maximumSize">
+                   <size>
+                    <width>16777215</width>
+                    <height>16777215</height>
+                   </size>
+                  </property>
+                  <property name="font">
+                   <font>
+                    <family>Arial</family>
+                   </font>
+                  </property>
+                  <property name="frameShape">
+                   <enum>QFrame::StyledPanel</enum>
+                  </property>
+                  <property name="frameShadow">
+                   <enum>QFrame::Raised</enum>
+                  </property>
+                  <layout class="QGridLayout" name="gridLayout_9">
+                   <item row="1" column="0">
+                    <layout class="QVBoxLayout" name="verticalLayout_6">
+                     <item>
+                      <widget class="QLabel" name="label_58">
+                       <property name="font">
+                        <font>
+                         <family>Arial</family>
+                         <pointsize>16</pointsize>
+                         <italic>true</italic>
+                        </font>
+                       </property>
+                       <property name="text">
+                        <string>Output processing</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_13">
+                       <item>
+                        <widget class="QLabel" name="label_8">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>16</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>False-colour maps</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <layout class="QHBoxLayout" name="horizontalLayout_15">
+                         <item>
+                          <widget class="QRadioButton" name="radioButton">
+                           <property name="font">
+                            <font>
+                             <family>Arial</family>
+                             <pointsize>12</pointsize>
+                            </font>
+                           </property>
+                           <property name="text">
+                            <string>Yes</string>
+                           </property>
+                           <property name="checked">
+                            <bool>true</bool>
+                           </property>
+                           <attribute name="buttonGroup">
+                            <string notr="true">buttonGroup_2</string>
+                           </attribute>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QRadioButton" name="radioButton_2">
+                           <property name="font">
+                            <font>
+                             <family>Arial</family>
+                             <pointsize>12</pointsize>
+                            </font>
+                           </property>
+                           <property name="text">
+                            <string>No</string>
+                           </property>
+                           <property name="checked">
+                            <bool>false</bool>
+                           </property>
+                           <attribute name="buttonGroup">
+                            <string notr="true">buttonGroup_2</string>
+                           </attribute>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_12">
+                       <item>
+                        <widget class="QLabel" name="label_9">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>16</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Flip upside down</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <layout class="QHBoxLayout" name="horizontalLayout_16">
+                         <item>
+                          <widget class="QRadioButton" name="radioButton_4">
+                           <property name="font">
+                            <font>
+                             <family>Arial</family>
+                             <pointsize>12</pointsize>
+                            </font>
+                           </property>
+                           <property name="text">
+                            <string>Yes</string>
+                           </property>
+                           <property name="checked">
+                            <bool>false</bool>
+                           </property>
+                           <attribute name="buttonGroup">
+                            <string notr="true">buttonGroup</string>
+                           </attribute>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QRadioButton" name="radioButton_3">
+                           <property name="font">
+                            <font>
+                             <family>Arial</family>
+                             <pointsize>12</pointsize>
+                            </font>
+                           </property>
+                           <property name="text">
+                            <string>No</string>
+                           </property>
+                           <property name="checked">
+                            <bool>true</bool>
+                           </property>
+                           <attribute name="buttonGroup">
+                            <string notr="true">buttonGroup</string>
+                           </attribute>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_28">
+                       <item>
+                        <widget class="QLabel" name="label_18">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>16</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>Brightness capping 2</string>
+                         </property>
+                         <property name="wordWrap">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QDoubleSpinBox" name="doubleSpinBox_3">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                          </font>
+                         </property>
+                         <property name="maximum">
+                          <double>50.000000000000000</double>
+                         </property>
+                         <property name="singleStep">
+                          <double>0.010000000000000</double>
+                         </property>
+                         <property name="value">
+                          <double>0.200000000000000</double>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="label_42">
+                         <property name="font">
+                          <font>
+                           <family>Arial</family>
+                           <pointsize>12</pointsize>
+                          </font>
+                         </property>
+                         <property name="text">
+                          <string>% percentile</string>
+                         </property>
+                         <property name="wordWrap">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                    </layout>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
                </layout>
-              </item>
-              <item row="3" column="0">
-               <widget class="QFrame" name="frame_8">
-                <property name="maximumSize">
-                 <size>
-                  <width>16777215</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="font">
-                 <font>
-                  <family>Arial</family>
-                 </font>
-                </property>
-                <property name="frameShape">
-                 <enum>QFrame::StyledPanel</enum>
-                </property>
-                <property name="frameShadow">
-                 <enum>QFrame::Raised</enum>
-                </property>
-                <layout class="QGridLayout" name="gridLayout_9">
-                 <item row="1" column="0">
-                  <layout class="QVBoxLayout" name="verticalLayout_6">
-                   <item>
-                    <widget class="QLabel" name="label_58">
-                     <property name="font">
-                      <font>
-                       <family>Arial</family>
-                       <pointsize>16</pointsize>
-                       <italic>true</italic>
-                      </font>
-                     </property>
-                     <property name="text">
-                      <string>Output montages</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_13">
-                     <item>
-                      <widget class="QLabel" name="label_8">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                         <pointsize>16</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Generate false-colour</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_15">
-                       <item>
-                        <widget class="QRadioButton" name="radioButton">
-                         <property name="font">
-                          <font>
-                           <family>Arial</family>
-                           <pointsize>12</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>Yes</string>
-                         </property>
-                         <property name="checked">
-                          <bool>false</bool>
-                         </property>
-                         <attribute name="buttonGroup">
-                          <string notr="true">buttonGroup_2</string>
-                         </attribute>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QRadioButton" name="radioButton_2">
-                         <property name="font">
-                          <font>
-                           <family>Arial</family>
-                           <pointsize>12</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>No</string>
-                         </property>
-                         <property name="checked">
-                          <bool>true</bool>
-                         </property>
-                         <attribute name="buttonGroup">
-                          <string notr="true">buttonGroup_2</string>
-                         </attribute>
-                        </widget>
-                       </item>
-                      </layout>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_12">
-                     <item>
-                      <widget class="QLabel" name="label_9">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                         <pointsize>16</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Flip upside down</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_16">
-                       <item>
-                        <widget class="QRadioButton" name="radioButton_4">
-                         <property name="font">
-                          <font>
-                           <family>Arial</family>
-                           <pointsize>12</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>Yes</string>
-                         </property>
-                         <property name="checked">
-                          <bool>false</bool>
-                         </property>
-                         <attribute name="buttonGroup">
-                          <string notr="true">buttonGroup</string>
-                         </attribute>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QRadioButton" name="radioButton_3">
-                         <property name="font">
-                          <font>
-                           <family>Arial</family>
-                           <pointsize>12</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>No</string>
-                         </property>
-                         <property name="checked">
-                          <bool>true</bool>
-                         </property>
-                         <attribute name="buttonGroup">
-                          <string notr="true">buttonGroup</string>
-                         </attribute>
-                        </widget>
-                       </item>
-                      </layout>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_28">
-                     <item>
-                      <widget class="QLabel" name="label_18">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                         <pointsize>16</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Brightness capping 2 (on output)</string>
-                       </property>
-                       <property name="wordWrap">
-                        <bool>true</bool>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QDoubleSpinBox" name="doubleSpinBox_3">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                        </font>
-                       </property>
-                       <property name="maximum">
-                        <double>50.000000000000000</double>
-                       </property>
-                       <property name="singleStep">
-                        <double>0.010000000000000</double>
-                       </property>
-                       <property name="value">
-                        <double>0.200000000000000</double>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="label_42">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                         <pointsize>12</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>% percentile</string>
-                       </property>
-                       <property name="wordWrap">
-                        <bool>true</bool>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                  </layout>
-                 </item>
-                </layout>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QFrame" name="frame_2">
-                <property name="font">
-                 <font>
-                  <family>Arial</family>
-                 </font>
-                </property>
-                <property name="frameShape">
-                 <enum>QFrame::StyledPanel</enum>
-                </property>
-                <property name="frameShadow">
-                 <enum>QFrame::Raised</enum>
-                </property>
-                <layout class="QGridLayout" name="gridLayout_6">
-                 <item row="1" column="0">
-                  <layout class="QVBoxLayout" name="verticalLayout_15">
-                   <item>
-                    <widget class="QLabel" name="label_56">
-                     <property name="font">
-                      <font>
-                       <family>Arial</family>
-                       <pointsize>16</pointsize>
-                       <italic>true</italic>
-                      </font>
-                     </property>
-                     <property name="text">
-                      <string>Image processing</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_2">
-                     <item>
-                      <widget class="QLabel" name="label_55">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                         <pointsize>16</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Tile size</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QComboBox" name="comboBox_3">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                        </font>
-                       </property>
-                       <property name="editable">
-                        <bool>false</bool>
-                       </property>
-                       <property name="currentIndex">
-                        <number>2</number>
-                       </property>
-                       <item>
-                        <property name="text">
-                         <string>128</string>
-                        </property>
-                       </item>
-                       <item>
-                        <property name="text">
-                         <string>256</string>
-                        </property>
-                       </item>
-                       <item>
-                        <property name="text">
-                         <string>512</string>
-                        </property>
-                       </item>
-                       <item>
-                        <property name="text">
-                         <string>1024</string>
-                        </property>
-                       </item>
-                       <item>
-                        <property name="text">
-                         <string>2048</string>
-                        </property>
-                       </item>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="label_48">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                         <pointsize>12</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>pixels</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_22">
-                     <item>
-                      <widget class="QLabel" name="label_5">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                         <pointsize>16</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Rescaling (bit-depth)</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <layout class="QVBoxLayout" name="verticalLayout_4">
-                       <item>
-                        <widget class="QCheckBox" name="checkBox">
-                         <property name="font">
-                          <font>
-                           <family>Arial</family>
-                           <pointsize>12</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>Linear</string>
-                         </property>
-                         <property name="checked">
-                          <bool>true</bool>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QCheckBox" name="checkBox_2">
-                         <property name="font">
-                          <font>
-                           <family>Arial</family>
-                           <pointsize>12</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>Natural logarithm</string>
-                         </property>
-                         <property name="checked">
-                          <bool>false</bool>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QCheckBox" name="checkBox_3">
-                         <property name="font">
-                          <font>
-                           <family>Arial</family>
-                           <pointsize>12</pointsize>
-                          </font>
-                         </property>
-                         <property name="text">
-                          <string>Original pixels</string>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_21">
-                     <item>
-                      <widget class="QLabel" name="label_6">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                         <pointsize>16</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Brightness capping 1 (on input)</string>
-                       </property>
-                       <property name="wordWrap">
-                        <bool>true</bool>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                        </font>
-                       </property>
-                       <property name="maximum">
-                        <double>20.000000000000000</double>
-                       </property>
-                       <property name="singleStep">
-                        <double>0.100000000000000</double>
-                       </property>
-                       <property name="value">
-                        <double>0.500000000000000</double>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="label_40">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                         <pointsize>12</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>% percentile</string>
-                       </property>
-                       <property name="wordWrap">
-                        <bool>true</bool>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_14">
-                     <item>
-                      <widget class="QLabel" name="label_7">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                         <pointsize>16</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>Median filtering</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QSpinBox" name="spinBox_6">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                        </font>
-                       </property>
-                       <property name="minimum">
-                        <number>1</number>
-                       </property>
-                       <property name="maximum">
-                        <number>16</number>
-                       </property>
-                       <property name="value">
-                        <number>3</number>
-                       </property>
-                      </widget>
-                     </item>
-                     <item>
-                      <widget class="QLabel" name="label_39">
-                       <property name="font">
-                        <font>
-                         <family>Arial</family>
-                         <pointsize>12</pointsize>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string>kernel size</string>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                  </layout>
-                 </item>
-                </layout>
-               </widget>
               </item>
              </layout>
             </widget>
@@ -928,7 +982,7 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
                      </font>
                     </property>
                     <property name="text">
-                     <string>e.g., lin_pca_0.3_tag1</string>
+                     <string>e.g., linear_pca_tag1</string>
                     </property>
                     <property name="wordWrap">
                      <bool>true</bool>
@@ -1234,7 +1288,7 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
                        </font>
                       </property>
                       <property name="text">
-                       <string>Principal component analysis</string>
+                       <string>Principal component analysis (PCA)</string>
                       </property>
                       <property name="checked">
                        <bool>true</bool>
@@ -1250,7 +1304,7 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
                        </font>
                       </property>
                       <property name="text">
-                       <string>Uniform manifold approximation and projection</string>
+                       <string>Uniform manifold approximation and projection (UMAP)</string>
                       </property>
                      </widget>
                     </item>
@@ -1263,7 +1317,7 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
                        </font>
                       </property>
                       <property name="text">
-                       <string>Deep sparse auto-encoder NN</string>
+                       <string>Deep sparse auto-encoder NN (DSA)</string>
                       </property>
                      </widget>
                     </item>
@@ -1629,7 +1683,7 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
                         </font>
                        </property>
                        <property name="text">
-                        <string>DSA setup</string>
+                        <string>Autoencoder setup (symmetrical)</string>
                        </property>
                       </widget>
                      </item>
@@ -1644,7 +1698,7 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
                           </font>
                          </property>
                          <property name="text">
-                          <string>Symmetrical architecture</string>
+                          <string>NN architecture</string>
                          </property>
                         </widget>
                        </item>
@@ -2081,7 +2135,7 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
                      <item>
                       <widget class="QGroupBox" name="groupBox_3">
                        <property name="title">
-                        <string>Number of pixels</string>
+                        <string>Processed volume</string>
                        </property>
                        <layout class="QGridLayout" name="gridLayout_13">
                         <item row="3" column="0">
@@ -2287,40 +2341,6 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
                            </widget>
                           </item>
                           <item>
-                           <widget class="QLabel" name="label_67">
-                            <property name="font">
-                             <font>
-                              <family>Arial</family>
-                              <pointsize>12</pointsize>
-                             </font>
-                            </property>
-                            <property name="text">
-                             <string>DSA</string>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
-                           <widget class="QDoubleSpinBox" name="doubleSpinBox_5">
-                            <property name="font">
-                             <font>
-                              <family>Arial</family>
-                             </font>
-                            </property>
-                            <property name="minimum">
-                             <double>0.010000000000000</double>
-                            </property>
-                            <property name="maximum">
-                             <double>1.000000000000000</double>
-                            </property>
-                            <property name="singleStep">
-                             <double>0.010000000000000</double>
-                            </property>
-                            <property name="value">
-                             <double>0.300000000000000</double>
-                            </property>
-                           </widget>
-                          </item>
-                          <item>
                            <widget class="QLabel" name="label_68">
                             <property name="font">
                              <font>
@@ -2351,6 +2371,40 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
                             </property>
                             <property name="value">
                              <double>0.030000000000000</double>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QLabel" name="label_67">
+                            <property name="font">
+                             <font>
+                              <family>Arial</family>
+                              <pointsize>12</pointsize>
+                             </font>
+                            </property>
+                            <property name="text">
+                             <string>DSA</string>
+                            </property>
+                           </widget>
+                          </item>
+                          <item>
+                           <widget class="QDoubleSpinBox" name="doubleSpinBox_5">
+                            <property name="font">
+                             <font>
+                              <family>Arial</family>
+                             </font>
+                            </property>
+                            <property name="minimum">
+                             <double>0.010000000000000</double>
+                            </property>
+                            <property name="maximum">
+                             <double>1.000000000000000</double>
+                            </property>
+                            <property name="singleStep">
+                             <double>0.010000000000000</double>
+                            </property>
+                            <property name="value">
+                             <double>0.300000000000000</double>
                             </property>
                            </widget>
                           </item>
@@ -2462,7 +2516,7 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
            <property name="text">
             <string>
   Chemistry simplifier converts a series of rock sample microanalytical maps (e.g., SEM-EDX, XFM) into dimensionally reduced images containing red, green, and blue channels (3-channel format).
- The interface functionality was published by  Acevedo Zamora et al. (2024) as a series of scripts (https://github.com/marcoaaz/AcevedoEtAl._2024b_autoencoder) that have now been updated for faster processing. 
+ The interface functionality was published by  Acevedo Zamora et al. (2024) as a series of scripts (https://github.com/marcoaaz/AcevedoEtAl._2024b_autoencoder) and were updated for faster processing. 
 </string>
            </property>
            <property name="alignment">
@@ -2518,7 +2572,7 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
                 </font>
                </property>
                <property name="text">
-                <string>Chemistry simplifier v1.0 (beta), Update: 9-Dec-25</string>
+                <string>Chemistry simplifier v1.0 (beta), Update: 25-Jan-26</string>
                </property>
                <property name="wordWrap">
                 <bool>true</bool>
@@ -2654,7 +2708,7 @@ QLabel[objectName=&quot;label_58&quot;] {color: grey;}
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1476</width>
+     <width>1563</width>
      <height>22</height>
     </rect>
    </property>

@@ -14,7 +14,7 @@ environment: chemSimplifier2
 Logo: https://stock.adobe.com/search?k=color+wheel+logo&asset_id=56781933
 
 Created: 19-Sep-25, Marco Acevedo
-Updated: 23-Sep-25, 30-Sep-25
+Updated: 23-Sep-25, 30-Sep-25, 19-Feb-26
 
 Current: python 3.9.13 (chemSimplifier3)
 
@@ -22,7 +22,7 @@ Current: python 3.9.13 (chemSimplifier3)
 
 #Essential dependencies
 from PyQt5.QtWidgets import QMainWindow, QMessageBox
-from chemistrySimplifier_v3 import Ui_MainWindow #relative path
+from chemistrySimplifier_v4 import Ui_MainWindow #relative path
 
 class Window(QMainWindow, Ui_MainWindow):
 
@@ -39,7 +39,7 @@ class Window(QMainWindow, Ui_MainWindow):
 		image_file_path1 = os.path.join(bundle_dir, "icons/AuScope_logo.png")		
 
 		#Window
-		self.setWindowTitle("Chemistry Simplifier v1.0")
+		self.setWindowTitle("Chemistry Simplifier v1.1")
 		self.setWindowIcon(QtGui.QIcon(icon_file_path))
 		self.setMinimumSize(600, 600)
 		self.setWindowFlags(self.windowFlags()) 
@@ -60,54 +60,64 @@ class Window(QMainWindow, Ui_MainWindow):
 		#Default inputs (edit manually)		
 		self.lineEdit_7.setText("trial_1")			
 		self.lineEdit_6.setText(r"E:\Teresa_article collab\91702_80R6w\tiff")		
-		self.lineEdit_5.setText("91702-(.+)")
+		self.lineEdit_5.setText("(.+)")
 		self.lineEdit_4.setText("tag_1")	
 		#radio buttons		
-		self.option2 = 0 #flip ud
-		self.option1 = 0 #recoloured
-		self.option3 = 'linear' #input types
-		self.radioButton_6.setEnabled(False)
+		self.option3 = 'linear' #input types		
+		self.option4 = 'standardising' #scaling types (normalisation)
+		self.option1 = 1 #recoloured
+		self.option2 = 0 #flip ud				
+		
 		#checkboxes				
 		self.items_output1 = ['linear'] #, 'log'
 		self.items_output2 = ['pca']
-		self.checkBox.setEnabled(False)		
+		
 		#widget list
 		self.list_widget = []		
-		#comboxes
+		#combo boxes
 		self.setup_combobox_data()		
-		#execution button
-		self.pushButton_7.setEnabled(False)
-
+		
 		#Define functionality     
-		#1
-		self.pushButton.clicked.connect(self.open_folder_dialog)		
-		#2
+		#Build input lists, connect stateChanged signal to a common handler
+
+		#(1)
+		self.pushButton.clicked.connect(self.open_folder_dialog)
+
+		self.checkBox.stateChanged.connect(lambda state, item="linear": self.update_list(state, item))
+		self.checkBox_2.stateChanged.connect(lambda state, item="log": self.update_list(state, item))		
+		self.checkBox_2.stateChanged.connect(self._on_checkbox_state_changed2)
+		self.checkBox_3.stateChanged.connect(lambda state, item="original": self.update_list(state, item))				
+
+		self.radioButton_7.toggled.connect(self.get_selected_option4) #normalisation
+		self.radioButton.toggled.connect(self.get_selected_option) #false colour images
+		self.radioButton_4.toggled.connect(self.get_selected_option2) #flip upside down
+		self.radioButton_5.toggled.connect(self.get_selected_option3) #use linear input
+
+		#(2)
+		self.checkBox_5.stateChanged.connect(lambda state, item="pca": self.update_list2(state, item))
+		self.checkBox_4.stateChanged.connect(lambda state, item="dsa": self.update_list2(state, item))
+		self.checkBox_6.stateChanged.connect(lambda state, item="umap": self.update_list2(state, item))
+
 		self.pushButton_4.clicked.connect(self.refresh_files)			
 		self.Add.clicked.connect(self.browse_files)			
 		self.Remove.clicked.connect(self.remove_selected_item)
 		self.Clear.clicked.connect(self.remove_all_items)	
 		self.toolButton.clicked.connect(self.move_item_up)
-		self.toolButton_2.clicked.connect(self.move_item_down)			
+		self.toolButton_2.clicked.connect(self.move_item_down)	
+
 		#load models
 		self.pushButton_2.clicked.connect(self.open_file_dialog1) 
 		self.pushButton_3.clicked.connect(self.open_file_dialog2)		
 		self.pushButton_5.clicked.connect(self.open_file_dialog3)	
-		#3		
-		self.pushButton_7.clicked.connect(self.runningFunction) 		 
-		
-		#Build input lists, connect stateChanged signal to a common handler
-		#1
-		self.checkBox.stateChanged.connect(lambda state, item="linear": self.update_list(state, item))
-		self.checkBox_2.stateChanged.connect(lambda state, item="log": self.update_list(state, item))		
-		self.checkBox_3.stateChanged.connect(lambda state, item="original": self.update_list(state, item))
-		
-		self.checkBox_2.stateChanged.connect(self._on_checkbox_state_changed2)
 
-		#2
-		self.checkBox_5.stateChanged.connect(lambda state, item="pca": self.update_list2(state, item))
-		self.checkBox_4.stateChanged.connect(lambda state, item="dsa": self.update_list2(state, item))
-		self.checkBox_6.stateChanged.connect(lambda state, item="umap": self.update_list2(state, item))
+		#(3)		
+		self.pushButton_7.clicked.connect(self.runningFunction) 
 
+		# High-level enabling 
+		self.radioButton_6.setEnabled(False)
+		self.checkBox.setEnabled(False)				
+		self.pushButton_7.setEnabled(False) #execution button			
+		
 	#endregion 
 
 	#Disabling Run button
@@ -142,22 +152,6 @@ class Window(QMainWindow, Ui_MainWindow):
 				self.items_output1.remove(item_value)  
 	
 	#Image processing
-	def get_selected_option2(self): #flip ud
-		if self.radioButton_4.isChecked():			
-			self.option2 = 1
-		elif self.radioButton_3.isChecked():			
-			self.option2 = 0		
-		else:			
-			self.option2 = None				
-
-	def get_selected_option(self): #save recoloured
-		if self.radioButton.isChecked():			
-			self.option1 = 1
-		elif self.radioButton_2.isChecked():			
-			self.option1 = 0		
-		else:			
-			self.option1 = None				
-	
 	def _on_checkbox_state_changed2(self, state):
 		if state == Qt.Unchecked:
 			self.radioButton_6.setEnabled(False)
@@ -165,6 +159,30 @@ class Window(QMainWindow, Ui_MainWindow):
 		else:			
 			self.radioButton_6.setEnabled(True)
 
+	def get_selected_option4(self): #save recoloured
+		if self.radioButton_7.isChecked():			
+			self.option4 = 'standardising'
+		elif self.radioButton_8.isChecked():			
+			self.option4 = 'centering'		
+		else:			
+			self.option4 = None	
+
+	def get_selected_option(self): #save recoloured
+		if self.radioButton.isChecked():			
+			self.option1 = 1
+		elif self.radioButton_2.isChecked():			
+			self.option1 = 0		
+		else:			
+			self.option1 = None	
+
+	def get_selected_option2(self): #flip ud
+		if self.radioButton_4.isChecked():			
+			self.option2 = 1
+		elif self.radioButton_3.isChecked():			
+			self.option2 = 0		
+		else:			
+			self.option2 = None					
+	
 	#endregion
 
 	#region (2) functions
@@ -347,25 +365,29 @@ class Window(QMainWindow, Ui_MainWindow):
 
 		#User input
 		#1
-		trial_name = self.lineEdit_7.text() #to prevent overwriting
 		imageFolder = self.lineEdit_6.text()		
+		trial_name = self.lineEdit_7.text() #to prevent overwriting		
 		tileSize = int(self.comboBox_3.currentText())
 		type_list = self.items_output1		
 		pctOut = self.doubleSpinBox_2.value() #percentile out in the input (for colour contrast)
-		filterSize = self.spinBox_6.value() #default=5; for smoothness
-		flip_ud = self.option2 #flip upside-down (=1 if ImageJ differs from Windows viewer)		
+		filterSize = self.spinBox_6.value() #default=5; for smoothness		
+		scaling_type = self.option4 #normalisation
 		save_recoloured = self.option1 #save chemical elements heatmap
+		flip_ud = self.option2 #flip upside-down (=1 if ImageJ differs from Windows viewer)		
+		outPct = self.doubleSpinBox_3.value() #default= 0.03; percentile out in the output (for colour contrast)
 
 		#2		
 		tag_combo = self.lineEdit_4.text()
 		input_type = self.option3 #radio button: linear, log 		
 		transform_list = self.items_output2 #checkbox: pca, dsa, umap		
 		model_path_pca = self.lineEdit_8.text() #previously saved (use if same input list)
-		model_path_dsa = self.lineEdit_9.text() 
 		model_path_umap = self.lineEdit_10.text()
-		outPct = self.doubleSpinBox_3.value() #default= 0.03; percentile out in the output (for colour contrast)
+		model_path_dsa = self.lineEdit_9.text() 		
 
 		#3				
+		n_neighbours = self.spinBox_8.value() #UMAP
+		min_dist = self.doubleSpinBox_6.value()
+
 		nodes_layer1 = self.spinBox.value() #DSA network encoder
 		nodes_layer2 = self.spinBox_3.value()
 		alpha_reg = float(self.lineEdit_2.text()) #default= 0.001
@@ -373,10 +395,7 @@ class Window(QMainWindow, Ui_MainWindow):
 		LEARNING_RATE = float(self.lineEdit_3.text()) #5e-2 (might diverge!, decrease if necessary)   
 		BATCH_SIZE = int(self.comboBox.currentText()) #predict uses=8192 (recommended for training)   		
 		epoch_default = self.spinBox_4.value() #default= 5, can get better Loss
-		test_ratio = self.doubleSpinBox.value() #test/training ratio
-		
-		n_neighbours = self.spinBox_8.value() #UMAP
-		min_dist = self.doubleSpinBox_6.value()
+		test_ratio = self.doubleSpinBox.value() #test/training ratio				
 		
 		fraction_user_pca = self.doubleSpinBox_4.value() #sub-sampling WSI
 		fraction_user_dsa = self.doubleSpinBox_5.value()		
@@ -459,6 +478,8 @@ class Window(QMainWindow, Ui_MainWindow):
 		fraction_dsa = min(fraction_user_dsa, fraction_max)
 		fraction_umap = min(fraction_user_umap, fraction_max) #7 min for 6013x4201 with 512x512 tiles		
 		
+		# scaling_type = 'centering' #standardising
+		
 		#Load models
 		
 		#Principal Component Analysis (PCA)
@@ -471,7 +492,7 @@ class Window(QMainWindow, Ui_MainWindow):
 			if not condition_pca:		    
 				print('PCA factorisation..')			
 
-				modelPATH = incremental_PCA(fileList, scale, fraction_pca, scaler_input, outputFolder)  
+				modelPATH = incremental_PCA(fileList, scale, fraction_pca, scaler_input, scaling_type, outputFolder)  
 				
 			else:		
 				print('Loading PCA model..')				
@@ -489,7 +510,7 @@ class Window(QMainWindow, Ui_MainWindow):
 				modelPATH = model_path_pca 
 
 			print('PCA transformation..')
-			fileList2 = transform_tiles_pca(fileList, resolution, scaler_input, modelPATH, 
+			fileList2 = transform_tiles_pca(fileList, resolution, scaler_input, scaling_type, modelPATH, 
 								   outputFolder2, n_workers)
 			
 			print('Stitching..')
@@ -508,7 +529,7 @@ class Window(QMainWindow, Ui_MainWindow):
 			if not condition_umap:	
 				print('UMAP fitting..')		
 
-				_, model_path = incremental_loading_UMAP(fileList, scale, fraction_umap, scaler_input,
+				_, model_path = incremental_loading_UMAP(fileList, scale, fraction_umap, scaler_input, scaling_type,
 										 n_neighbours, min_dist, outputFolder)  
 				
 				modelPATH = model_path
@@ -528,7 +549,7 @@ class Window(QMainWindow, Ui_MainWindow):
 				modelPATH = model_path_umap 
 
 			print('UMAP transformation..')
-			fileList2 = transform_tiles_umap(fileList, resolution, scaler_input, modelPATH, 
+			fileList2 = transform_tiles_umap(fileList, resolution, scaler_input, scaling_type, modelPATH, 
 									outputFolder2, n_workers_umap)
 			
 			print('Stitching..')
@@ -601,7 +622,8 @@ if __name__ == "__main__":
 	#relative paths
 	from helperFunctions.mkdir_options import make_dir, mkdir2	
 	from main_functions import parse_system_info, get_device
-	from functions_pyramids import qListWidget_list, getFileList, build_filePaths, build_pyramids, build_pyramids_prior, predict_fileSize, stitch_crop_rescale, stitch_crop_rescale_prior
+	from functions_pyramids import qListWidget_list, getFileList, build_filePaths, predict_fileSize
+	from functions_pyramids import build_pyramids, build_pyramids_prior, stitch_crop_rescale, stitch_crop_rescale_prior	
 	from functions_PCA import incremental_PCA, transform_tiles_pca
 	from functions_DSA import incremental_loading_DSA, incremental_training_DSA, transform_tiles_dsa    	
 	from functions_UMAP import incremental_loading_UMAP, transform_tiles_umap
