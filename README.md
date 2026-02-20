@@ -1,12 +1,13 @@
 # Chemistry Simplifier
 # The package to process rock chemical maps as dimensionally reduced flat images in RGB while maximing the original images content of any micro-analysis technique.
 
-**Version**: 1 (beta)  
+**Version**: 1.1  
+**Binary download**: [Executable link](https://zenodo.org/records/18706790) (for Windows 11)  
 **Author**: Dr Marco Acevedo Z. (maaz.geologia@gmail.com)  
 **Affiliation**: School of Earth and Atmospheric Sciences, Queensland University of Technology  
-**Date**: November 2025  
+**Date**: 20-February-2026  
 **Citation**: [Acevedo Zamora et al. 2024](https://www.sciencedirect.com/science/article/pii/S0009254124000779#f0015)  
-**Previous versions**: [Original repository](https://github.com/marcoaaz/AcevedoEtAl._2024b_autoencoder)  
+**Previous repository**: [Scripts repository](https://github.com/marcoaaz/AcevedoEtAl._2024b_autoencoder)  
 
 ---
 
@@ -19,7 +20,7 @@ Colourful image outputs are rapidly produced and are much simpler to understand 
 Locally, the output intermediate/final montages are saved in a structured folder sequence for each trial/tag combination (see interface). All processing metadata is recorded for potential future documentation in research papers. 
 
 <p align="center">
- <img width=80% height=80% alt="Image" src="https://github.com/user-attachments/assets/090d49cf-8675-4e50-b521-ff6b78c250a5" />
+ <img width=80% height=80% alt="Image" src="https://github.com/user-attachments/assets/29ac2285-805f-4b54-812e-7ee2820c6b82" />
 </p>
 
 With trialling and well-characterised samples, I demonstrated that:
@@ -111,11 +112,10 @@ The current Chemistry simplifier version was demonstrated to work on Windows 11 
 
 ## Issues and future work
 
-- This is a beta version that will soon be improved with user feedback
+- This version can be improved with user feedback
 - You are welcome to reach out and share your developing ideas with me. Under a scientific collaboration project, I could help you design, implement, and trial new Cube converter software options.
 - I had in mind:
-  - Cloud implementation with more processing cores
-  - Trialling UMAP more extensively as it is also more computationally expensive to use a neighbour node graph model
+  - Cloud implementation with more processing cores  
 - Support for Mac OS and Linux 
 
 ## Related papers
