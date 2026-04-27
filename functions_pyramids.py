@@ -10,10 +10,10 @@ Citation: This is the update of the first half of the first script for dimension
 Current version: python 3.13.7, chemSimplifier2
 Written by: Marco Andres, ACEVEDO ZAMORA
 
-Updates:
+Updated:
 Published (first version): 14-Nov-23
 second version for whole-slide imaging: 19-Jun-24, 5-Sep-24
-third version for GUI: 16-sep-25, 30-Sep-25, 9-Oct-25
+third version for GUI: 16-sep-25, 30-Sep-25, 9-Oct-25, 3-Apr-26
 
 Follows previous work: tilingAndStacking_v5.py
 Autoencoder scripts: python 3.7.9 (DSA_env)
@@ -42,7 +42,7 @@ import glob
 import re
 import numpy as np
 import pandas as pd
-from PIL import Image #to remove pyvips metadata
+import matplotlib.pyplot as plt #to provide colourmap options
 
 #VIPS
 add_dll_dir = getattr(os, 'add_dll_directory', None) #Windows=True
@@ -64,111 +64,87 @@ import pyvips
 # print("vips version: " + str(pyvips.version(0))+"."+str(pyvips.version(1))+"."+str(pyvips.version(2)))
 
 from helperFunctions.mkdir_options import mkdir1, mkdir2, remove
+from concurrent.futures import ThreadPoolExecutor #passes pointers not handles
+
+from PIL import Image #to remove pyvips metadata
+Image.MAX_IMAGE_PIXELS = None #trusting they are images
 
 ## Functions
 
 #region Helper functions
 
-def getFileList(imageFolder, input_expression, extension):
-	#Examples:
-	#pattern = re.compile(r".*/(.*)_(\d+)_(\d+)\.tiff") 
-	#pattern = re.compile(r".+\\153874_(.+)-(.+)\.tiff") 
-	#fileList = glob.glob(f"{imageFolder}/91702-*-*.tiff")   
+def build_lut(cmap_name='jet'):
+	#For recoloured (false-colour) images colormap	
 
-	if input_expression == "":
-		expression = "(.+)"
-	else:
-		expression = input_expression            
-	extension2 = r"\." + extension
+	"""
+	Uses Matplotlib colormaps to create a pyvips LUT.
+	e.g.: 'jet', 'hot', 'viridis', 'magma', 'plasma', 'inferno'
 
-	#Edit to be similar
-	fileList = glob.glob(f"{imageFolder}/*.{extension}") #perfect match needed with 'pattern'    
-	pattern = re.compile(r".+\\" + expression + extension2)        
+	pyvips only (similar to 'jet'):
+	# img_indexes = pyvips.Image.identity()
+	# lut = img_indexes.falsecolour() #standard heatmap
+	# #256x1 uchar, 3 bands, srgb, pngload	
+	"""
+
+	# 1. Get the colormap from matplotlib
+	cmap = plt.get_cmap(cmap_name)
 	
-	#print(np.transpose(np.array(fileList)))           
-
-	return fileList, pattern
-
-def build_filePaths(fileList, pattern, destDir):
-
-	list1 = []    
-	for filename in fileList:
-
-		match = pattern.match(filename)       
-		
-		if match:            
-			element = match.group(1) #most common                    
-			list1.append([element, filename])		            
-		
-	path_table = pd.DataFrame(list1)
-	path_table.columns = ["parsed_element", "path"]
-
-	#Save table
-	file_name1 = os.path.join(destDir, "inputs_refresh.csv")
-	path_table.to_csv(file_name1, sep=',', encoding='utf-8', index=False, header=True)
+	# 2. Create 256 colors (R, G, B), drop alpha    
+	colors = cmap(np.linspace(0, 1, 256))[:, :3] 
 	
-	return path_table
-
-
-def qListWidget_list(list_widget, workingDir): #For GUI
-		
-	item_texts = []
-	for i in range(list_widget.count()):
-		item_texts.append(list_widget.item(i).text())
-
-	chosen_table = pd.DataFrame(item_texts)
-	chosen_table.columns = ["path"]
-
-	#Save table
-	file_name1 = os.path.join(workingDir, "inputs_run.csv")
-	chosen_table.to_csv(file_name1, sep=',', encoding='utf-8', index=False, header=True)
-
-	return chosen_table
-
-def predict_fileSize(dim, fileSize_th):
-	#fraction of WSI for training (prevents RAM overload) 
-	#pytorch issue:  
-	#OverflowError: cannot serialize a bytes object larger than 4 GB          
-
-	imageHeight = dim[0]
-	imageWidth = dim[1]
-	n_layers_input = dim[2]
-
-	#Predict file size
-	bitDepth = (2**8)
-	fileSize = (10**(-9))*(imageHeight*imageWidth*n_layers_input*bitDepth/8) #GB    
-
-	if fileSize > fileSize_th:
-		fraction = fileSize_th/fileSize    
-	else:
-		fraction = 1
-
-	# print(f"mosaic of WxHxC= {imageWidth}x{imageHeight}x{n_layers_input} px")     
-
-	return fraction
+	# 3. Convert to 0-255 uchar format
+	colors_8bit = (colors * 255).astype(np.uint8)
 	
+	# 4. Reshape for pyvips: must be 256x1 pixels with 3 bands    
+	lut = pyvips.Image.new_from_memory(
+		colors_8bit.tobytes(), 
+		256, 1, 3, 
+		'uchar'
+		)
+
+	return lut
+
+def descriptive_colnames(type_list):
+	
+	stats_cols = ['min', 'max', 'sum', 'sumOfSquares', 'mean', 'stddev', 
+						'min_x_coord', 'min_y_coord', 'max_x_coord', 'max_y_coord'] #first   
+	threshold_cols = ["th_low_input", "th_high_input"] #second
+	
+	#first
+	type_list2 = [output_type for output_type in type_list if output_type != "original"]
+	type_list3 = ["original", *type_list2]
+	stats_cols2 = [output_type + "_" + stat_type for output_type in type_list3 for stat_type in stats_cols ]
+	#second
+	threshold_cols2 = [output_type + "_" + threshold_type for output_type in type_list2 for threshold_type in threshold_cols ]
+
+	descriptive_cols = stats_cols2 + threshold_cols2
+
+	return descriptive_cols
+
 #endregion
 
 #region Image processing 
 
 def clear_all_metadata(imgname): 	
-	#The output will not have an ImageJ pixel calibration that conflicts with 
-	# control point registration (Fiji > BigWarp) referenced to the 'moving' image control points
-	#by Muhammad Abdullahi: 
-	#https://thepythoncode.com/article/how-to-clear-image-metadata-in-python
-
-    img = Image.open(imgname)
-    
-	# Read the image data, excluding metadata.
-    data = list(img.getdata())
-    
-	# Create a new image with the same mode and size but without metadata.
-    img_without_metadata = Image.new(img.mode, img.size)
-    img_without_metadata.putdata(data)
-    
-	# Overwrite. 
-    img_without_metadata.save(imgname)
-
+	#Remove ImageJ pixel calibration that conflicts with registration (ImageJ BigWarp) 
+	# referenced to the 'moving' image control points. 
+	# Following Muhammad Abdullahi: 
+	# https://thepythoncode.com/article/how-to-clear-image-metadata-in-python	
+	
+	with Image.open(imgname) as img: #avoid memory leaks
+				
+		# Create a new image with the same mode and size but without metadata.
+		# without 'info' dict (metadata)
+		img_without_metadata = Image.new(img.mode, img.size)
+		img_without_metadata.paste(img)
+		img_without_metadata.save(imgname)
+	
+	#Old:
+	# img = Image.open(imgname)		
+	# data = list(img.getdata()) #pixels without metadata		# 
+	# img_without_metadata = Image.new(img.mode, img.size)
+	# img_without_metadata.putdata(data)	
+	# img_without_metadata.save(imgname)
 	
 def save_recoloured_channel(image_med, lut, destFile1):
 
@@ -181,32 +157,32 @@ def channel_uint8(image_rs3):
 
 	return image_rs4
 
-def find_P_thresholds(input_channel, percentOut, bit_precision):
-	#bit_precision: 8-bit=255; 16-bit=65535
+def find_P_thresholds(input_channel, percentOut, bit_precision = 16):
+	#bit_precision: 8-bit=255; 16-bit=65535	
 	
-	percentOut1 = percentOut + 0.005 #medicine
-	# percentOut=0 Error: "65536" of type 'gint' is invalid or out of range for property 'threshold' of type 'gint'
-
-	calc_depth = (2**bit_precision) -1     
-	min_val = input_channel.min()
-	max_val = input_channel.max()
+	calc_depth = (2**bit_precision) -1  
+	stats = input_channel.stats() #eager pass (load data once)
+	min_val = stats(0, 0)[0] 
+	max_val = stats(1, 0)[0]    
 	 
 	#medicine 1: zero division if weight-decay is too low and no. epochs too high
 	range_val = max((max_val - min_val), 0.1) 
 	ratio = (range_val/calc_depth)
 
-	#Finding percentiles	
-	image_rs1 = (input_channel - min_val) / ratio #0-65355         
-	image_rs2 = image_rs1.cast("uint") #'uchar'=8-bit, 'uint' or 'ushort'=16-bit       
-		
-	th_low = image_rs2.percent(percentOut1) #'int'	
-	th_high = image_rs2.percent(100 - percentOut1)        
+	#medicine 2: 'gint' is invalid or out of range
+	p_low = percentOut + 0.005 
+	p_high = 100 - p_low
+
+	#Finding percentiles (16-bit), 'uchar'=8-bit, 'uint' or 'ushort'=16-bit  	
+	image_rs2 = ((input_channel - min_val) / ratio).cast("ushort") #uint	
+
+	th_low = image_rs2.percent(p_low) #'int'	
+	th_high = image_rs2.percent(p_high)        	
 	
-	#values	
 	th_low_input = th_low*ratio + min_val 
 	th_high_input = th_high*ratio + min_val                    
 
-	#medicine 2: zero division if you are processing an artefact image (e.g., Synchrotron data Flux0)
+	#medicine 3: zero division when processing an artefact image (e.g., Synchrotron XFM Flux0)
 	if th_low_input == th_high_input:
 		th_high_input = th_high_input + 1
 
@@ -233,9 +209,11 @@ def channel_standardise(input_channel, mean_temp, std_temp):
 	return output_channel  
 
 def standardising_operation(image_xyz2, scaler_input):
-	#Z-score Normalisation (standardisation)
-	#Use for algorithms that assume a normal distribution (e.g., Logistic Regression, SVM, Linear Regression).
-	
+	#Z-score Normalisation (standardisation).
+	#Unitless method used in distance-based algorithms assuming a normal distribution 
+	#Example: KNN, PCA, Logistic Regression, Linear Regression.
+	#This is a NaN propagating function
+
 	n_rows2 = image_xyz2.shape[0]	
 	mean_temp = scaler_input.iloc[:, 0].to_numpy().reshape((1, -1)) #row		
 	mean_temp2 = np.tile(mean_temp, (n_rows2, 1) )		
@@ -245,7 +223,9 @@ def standardising_operation(image_xyz2, scaler_input):
 	return image_xyz3
 
 def centering_operation(image_xyz2, scaler_input):
-	#Centering around zero
+	#Centering around zero. Preserve physical meaning and relative variance (same units)
+	#Used in regression with polynomials (reduce collinearity)
+	#This is a NaN propagating function
 
 	n_rows2 = image_xyz2.shape[0]
 	mean_temp = scaler_input.iloc[:, 0].to_numpy().reshape((1, -1)) #row		
@@ -256,9 +236,11 @@ def centering_operation(image_xyz2, scaler_input):
 
 #Similar to vsiFormatter > ray_tracing_module.py
 def img_rescaled(image_cropped, percentOut):	
+	
 	#Descr. statistics (follows 'tilingAndStacking_v3.py')
 	# minimum, maximum, sum, sum of squares, mean, standard deviation, 
-	# x coordinate of minimum, y coordinate of minimum, x coordinate of maximum, y coordinate of maximum  	
+	# x coordinate of minimum, y coordinate of minimum, 
+	# x coordinate of maximum, y coordinate of maximum  	
 
 	#Default
 	min_val = 0
@@ -401,6 +383,9 @@ def img_rescaled_prior(image_cropped, descriptiveRow):
 
 	return image_rescaled, stats_list3
 
+#endregion
+
+#region Stitching
 def stitch_crop_rescale(fileList2, tiles_across, outPct, outputFolder):    
 
 	#identify method
@@ -434,11 +419,12 @@ def stitch_crop_rescale(fileList2, tiles_across, outPct, outputFolder):
 	image_rescaled.write_to_file(file_output)
 	image_rescaled_int2.write_to_file(file_output2) #resunit= cm, inch (mandatory)	
 	clear_all_metadata(file_output2) #medicine
-
+	
 	#Output stats (for reproducibility)	
-	file_output2 = os.path.join(outputFolder, "descriptiveStats_" + str2 + ".csv")	
-	descriptiveStats.to_csv(file_output2, sep=',', encoding='utf-8', index=False, header=True)
+	file_output_table = os.path.join(outputFolder, "descriptiveStats_" + str2 + ".csv")	
+	descriptiveStats.to_csv(file_output_table, sep=',', encoding='utf-8', index=False, header=True)
 
+	return file_output2
 
 def stitch_crop_rescale_prior(fileList2, tiles_across, modelPATH, outputFolder):    
 
@@ -461,12 +447,17 @@ def stitch_crop_rescale_prior(fileList2, tiles_across, modelPATH, outputFolder):
 	left, top, width, height = image_stitched.find_trim(threshold=0.001, background=[0])
 	image_cropped = image_stitched.crop(left, top, width, height) #modify accordingly    
 
-	#rescale bit-depth
-	path1 = os.path.dirname(modelPATH)
-	statsFile = os.path.join(path1, "descriptiveStats_" + str2 + ".csv")#chosen_table must match
-	descriptiveRow = pd.read_csv(statsFile) #input stats
+	#rescale bit-depth (issue to fix in next version)	
+	try:
+		path1 = os.path.dirname(modelPATH)
+		statsFile = os.path.join(path1, "descriptiveStats_" + str2 + ".csv")#chosen_table must match
+		descriptiveRow = pd.read_csv(statsFile) #input stats	
+		image_rescaled, descriptiveStats = img_rescaled_prior(image_cropped, descriptiveRow) #float
+	except:
+		#if previous process failed
+		outPct = 0.2 #default (issue: should be retrieved from previos)
+		image_rescaled, descriptiveStats = img_rescaled(image_cropped, outPct) #0-255 float
 	
-	image_rescaled, descriptiveStats = img_rescaled_prior(image_cropped, descriptiveRow) #float
 	image_rescaled_int = image_rescaled.cast("uchar") #uint8  
 	image_rescaled_int2 = image_rescaled_int.copy()	#xres (inmutable)
 
@@ -479,160 +470,201 @@ def stitch_crop_rescale_prior(fileList2, tiles_across, modelPATH, outputFolder):
 	clear_all_metadata(file_output2) #medicine
 
 	#Output stats (for reproducibility)	
-	file_output2 = os.path.join(outputFolder, "descriptiveStats_" + str2 + "_prior.csv")	
-	descriptiveStats.to_csv(file_output2, sep=',', encoding='utf-8', index=False, header=True)
+	file_output_table = os.path.join(outputFolder, "descriptiveStats_" + str2 + "_prior.csv")	
+	descriptiveStats.to_csv(file_output_table, sep=',', encoding='utf-8', index=False, header=True)
 
+	return file_output2
 
 #endregion
 
-#region Save Deep Zoom tiles
+#region Save stack image pyramids as BigTIFF
 
-def learn_tileConfiguration(destDir):
-	# scan tileset    
-	fileList = glob.glob(f"{destDir}/*/*/*_*.tif")
-	pattern = re.compile(r".*\\(\w+)_pyramid_files\\0\\(\d+)_(\d+)\.tif") 
-	#r".*/(\d+)_(\d+)\.tif" in Linux
-	
-	out2 = []
-	for filename in fileList:
-		match = pattern.match(filename)
+def generate_tile_config(type_list, img_w, img_h, tileSize, destDir):
+	all_rows = []
 
-		if match:     
-			#Parsed info
-			type = match.group(1)
-			x = match.group(2)
-			y = match.group(3)
+	for type in type_list:		
+		
+		tiff_path = os.path.join(destDir, 'pyramids', f"{type}_stack.tif")
+		
+		if not os.path.exists(tiff_path):
+			print(f"Warning: {tiff_path} not found. Skipping...")
+			continue        
 
-			#dim
-			image_temp = pyvips.Image.new_from_file(filename)
-			W = image_temp.width
-			H = image_temp.height
+		# Calculate grid (pythonic order)
+		for row_idx, y in enumerate(range(0, img_h, tileSize)):
+			for col_idx, x in enumerate(range(0, img_w, tileSize)):
+				current_w = min(tileSize, img_w - x)
+				current_h = min(tileSize, img_h - y)
+				
+				all_rows.append({
+					'filepath': tiff_path,
+					'type': type,
+					'x': col_idx, 
+					'y': row_idx,
+					'W': current_w,
+					'H': current_h,
+					'pixel_x': x, # Start pixel X
+					'pixel_y': y  # Start pixel Y
+				})
 
-			out2.append([filename, type, x, y, W, H])
+	# Create DataFrame
+	tile_table = pd.DataFrame(all_rows)	
+	tile_table2 = tile_table.sort_values(['type', 'y', 'x'], ascending=[True, True, True])
 
-	out3 = np.array(out2) 
-	file_table = pd.DataFrame(out3)
-	file_table.columns =['filepath', 'type', 'x', 'y', 'W', 'H']    
-	#medicine
-	file_table['x'] = file_table['x'].astype(int)
-	file_table['y'] = file_table['y'].astype(int)
-	file_table2 = file_table.sort_values(['type', 'y', 'x'], ascending=[True, True, True]) #for pyvips.Image.arrayjoin
-
+	# Save CSV
 	file_name1 = os.path.join(destDir, "tileConfiguration.csv")
-	file_table2.to_csv(file_name1, sep=',', encoding='utf-8', index=False, header=True)
+	tile_table2.to_csv(file_name1, sep=',', encoding='utf-8', index=False, header=True)
 
-	#Console
-	tiles_down = int(file_table2['y'].max()) + 1
-	tiles_across = int(file_table2['x'].max()) + 1
-	print(f"Deep Zoom pyramid with {tiles_down}x{tiles_across} tiles")
+	# Console Summary
+	for t in type_list:
+		subset = tile_table2[tile_table2['type'] == t]
 
-	return file_table2
+		if not subset.empty:
+			tiles_down = subset['y'].max() + 1
+			tiles_across = subset['x'].max() + 1
+			print(f"Type '{t}': {tiles_down}x{tiles_across} tiles mapped.")
 
-def save_stack(path_list, tileSize, flip_ud, destDir):
+	return tile_table2
+
+def save_stack(path_list, tileSize, destDir):
 	#Saving original stack (used for 'ROIimageAnalysis_v7_wsi.m' script)
 
-	destDir4 = os.path.join(destDir, 'original_pyramid')
+	destDir4 = os.path.join(destDir, 'pyramids')
 	destDir4_files = destDir4 + '_files'
 	try:
 		remove(destDir4_files) #and subfolders
 	except:
-		print("Producing original pyramid for the first time")
+		print("Saving original images as Deep Zoom pyramid with only level 0.")
 
 	#Loading tiles
 	pages = [pyvips.Image.new_from_file(path) for path in path_list]
-	image_stack = pages[0].bandjoin(pages[1:])
+	image_stack = pages[0].bandjoin(pages[1:])	  
 
-	#Medicine (fixing pyvips vertical flip)
-	if flip_ud == 1:
-		image_flipped = image_stack.flipver()
-	elif flip_ud == 0:
-		image_flipped = image_stack    
-
-	image_flipped.dzsave(destDir4, suffix='.tif', 
+	image_stack.dzsave(destDir4, suffix='.tif', 
 					skip_blanks=-1, background=0, 
 					depth='one', overlap=0, tile_size= tileSize, 
 					layout='dz') #Tile overlap in pixels*2
 
-def save_transformed_stack(stack_layers_log, type, tileSize, flip_ud, destDir):
-	#Saving linear/log transformed stack (uint8) 
-	#Output used of PCA analysis 'wsi_dimPCA_v1.m' and autoencoder 'DSA_wsi_training_v3.py'
+
+def save_transformed_stack_bigtiff(stack_layers_log, type, tileSize, destDir):
 	
-	if type == 'log': #natural log
-		destination_folder = 'log_pyramid'
-	elif type == 'linear':
-		destination_folder = 'linear_pyramid'    
-
-	destDir3 = os.path.join(destDir, destination_folder)
-	destDir3_files = destDir3 + '_files'
-	try:
-		remove(destDir3_files)
-	except:
-		print(f"Saving {type} tiles for the first time")
-
-	#Transformed data
-	image_stack_log_recoloured = stack_layers_log[0].bandjoin(stack_layers_log[1:])    
-
-	#Medicine: fixing pyvips vertical flip on Synchrotron TIFs
-	if flip_ud == 1:
-		image_log_flipped = image_stack_log_recoloured.flipver()
-	elif flip_ud == 0:
-		image_log_flipped = image_stack_log_recoloured
+	# Setup naming
+	destDir3 = os.path.join(destDir, 'pyramids')
+	os.makedirs(destDir3, exist_ok=True)
 	
-	
-	image_log_flipped.dzsave(destDir3, suffix='.tif', 
-					skip_blanks=-1, background=0, 
-					depth='one', overlap=0, tile_size= tileSize, 
-					layout='dz') #Tile overlap in pixels*2  
+	tiff_path = os.path.join(destDir3, f"{type}_stack.tif")
 
-def build_pyramids(chosen_table, type_list, tileSize, filterSize, pctOut, destDir, save_recoloured, flip_ud):
+	# Transformed data
+	image_stack = stack_layers_log[0].bandjoin(stack_layers_log[1:])    	
+	
+	# Save as Tiled BigTIFF
+	print(f"Writing BigTIFF for {type}...")
+	image_final = image_stack.copy(interpretation="multiband") 
+	#Note: forced (interleave channels live next to each other on disk)
+	
+	image_final.tiffsave(tiff_path, 
+						bigtiff=True, 
+						tile=True, 
+						tile_width = tileSize,
+						tile_height = tileSize,
+						compression="none",
+						predictor="none") 	
+
+	return tiff_path
+
+def save_recoloured_stack(fileList0, type_list, linear_list, log_list, lut, destDir2, max_workers=4):
+	"""
+	Recoloured images for retrospective feedback (discarding artifact images)
+	"""  
+	print('Saving recoloured maps..')
+	
+	def process_recolour(i, filename):
+		basename = os.path.splitext(os.path.basename(filename))[0]
+		created_paths = []
+
+		for t_type in type_list:
+			# Select the correct list based on type
+			if t_type == 'linear':
+				temp_list = linear_list
+			elif t_type == 'log':
+				temp_list = log_list
+			else:
+				continue
+
+			if i < len(temp_list):
+				destFile1 = os.path.join(destDir2, f"{basename}_{t_type}.tif")                
+				
+				image_med = temp_list[i]
+				image_med_uchar = (255 * image_med).cast("uchar")
+				save_recoloured_channel(image_med_uchar, lut, destFile1)
+
+				created_paths.append(destFile1)
 		
-	fileList0 = chosen_table["path"]
+		return created_paths
 
-	#Preparing false-colour images
-	destDir2 = os.path.join(destDir, 'recoloured'+ '_pctOut' + str(pctOut))        
-	mkdir2(destDir2)
+	# Execute in parallel
+	with ThreadPoolExecutor(max_workers=max_workers) as executor:
+		
+		results = list(executor.map(lambda p: process_recolour(*p), enumerate(fileList0)))
 
-	#Define colour map
-	img_indexes = pyvips.Image.identity()
-	lut = img_indexes.falsecolour() #using standard heatmap
-	#256x1 uchar, 3 bands, srgb, pngload
+		#Notes: 
+		#results is a list of lists: [[path1, path2], [path3, path4], ...]
+		#executor.map PRESERVES ORDER based on fileList0
+		#list() to force the generator to execute
 	
-	#Preparing pyvips metadata table    
-	stats_cols = ['min', 'max', 'sum', 'sumOfSquares', 'mean', 'stddev', 
-						'min_x_coord', 'min_y_coord', 'max_x_coord', 'max_y_coord'] #first   
-	threshold_cols = ["th_low_input", "th_high_input"] #second
-	
-	#first
-	type_list2 = [output_type for output_type in type_list if output_type != "original"]
-	type_list3 = ["original", *type_list2]
-	stats_cols2 = [output_type + "_" + stat_type for output_type in type_list3 for stat_type in stats_cols ]
-	#second
-	threshold_cols2 = [output_type + "_" + threshold_type for output_type in type_list2 for threshold_type in threshold_cols ]
+	dest_list = [path for sublist in results for path in sublist] #flattening	
+	print(f'Finished saving {len(dest_list)} recoloured maps.')
 
-	descriptive_cols = stats_cols2 + threshold_cols2
+	return dest_list
+
+#endregion
+
+#region Build image pyramids
+
+def build_pyramids(chosen_table, scale, flip_ud, type_list, pctOut, filterSize, 
+				   save_recoloured, lut, tileSize, destDir):
+
+	#Default
+	target_W = 5000 #same as 'img_rescaled'
+	scale_factor = 1/scale	
+	descriptive_cols = descriptive_colnames(type_list) #pyvips stats table    		
 
 	#Load montages
+	fileList0 = chosen_table["path"]
+
 	log_list = [] #for images
 	linear_list = []        
 	stats_list = [] #for csv
 	for filename in fileList0:
 
-		basename_ext = os.path.basename(filename)
-		basename = os.path.splitext(basename_ext)[0]                                    
-		print(f"Processing {basename_ext}")                        
+		basename_ext = os.path.basename(filename)		
+		print(f"Loading {basename_ext}")                        
 		
 		#Load image
-		image = pyvips.Image.new_from_file(filename) 
-		
-		#Ensure layers have 1 channel
-		n_channels = image.bands
+		full_image = pyvips.Image.new_from_file(filename) 
+		img_w = full_image.width			
+		n_channels = full_image.bands
 		if n_channels > 1:
-			image = image[0]     
+			full_image = full_image[0] #1 channel only 
+		
+		#Generate thumbnail 1					
+		ratio = target_W/img_w
+		image_thumbnail = full_image.resize(ratio, kernel=pyvips.Kernel.NEAREST)
 
 		#Descriptive statistics 1
-		out = pyvips.Image.stats(image)
+		out = pyvips.Image.stats(image_thumbnail)
 		out1 = out.numpy()
-		statistic_vals = out1[0, :]
+		statistic_vals = out1[0, :] #stats for all bands together  
+
+		#Downsample (performance boost)
+		if scale_factor != 1:
+			full_image = full_image.resize(scale_factor) #pyvips.Kernel.LANCZOS3 default
+		img_w2 = full_image.width
+		img_h2 = full_image.height
+
+		#Flip upside down (optional)
+		if flip_ud == 1:
+			full_image = full_image.flipver()				
 		
 		item = [] #stats table row
 		item_th = [] #th table row
@@ -640,188 +672,189 @@ def build_pyramids(chosen_table, type_list, tileSize, filterSize, pctOut, destDi
 
 		#Transforming input		
 		for type in type_list:
+			
+			if type == "original":
+				continue
 
-			if type == "log":  #natural log() 
-				image_positive = 1 + image - statistic_vals[0]
-				image_temp = image_positive.log() 
-				
-				#Finding percentiles, capping and stretching image histogram bottom/top                
-				th_low_input, th_high_input = find_P_thresholds(image_temp, pctOut, 16)		
-				channel_positive2 = channel_rescaled(image_temp, 0, 1, th_low_input, th_high_input) #normalization	                     
-				image_med = channel_positive2.median(filterSize) #median filter   
-
-				log_list.append(image_med) #for stack
-
-			elif type == "linear":
-				image_temp = image - statistic_vals[0]			
-
+			else:
 				#Finding percentiles, capping and stretching image histogram bottom/top
-				th_low_input, th_high_input = find_P_thresholds(image_temp, pctOut, 16)		
-				channel_positive2 = channel_rescaled(image_temp, 0, 1, th_low_input, th_high_input)	#normalise                     
-				image_med = channel_positive2.median(filterSize) #median filter   
 
-				linear_list.append(image_med) #for stack
+				thumbnail_positive = image_thumbnail[0] - statistic_vals[0]
+				channel_positive = full_image - statistic_vals[0]	
 
-			elif type == "original":
-				continue                                                                                                 
+				if type == "log":  #natural log() 					
+															
+					thumbnail_log = (1 + thumbnail_positive).log()
+					channel_positive3 = (1 + channel_positive).log() 					
+				
+					th_low_input, th_high_input = find_P_thresholds(thumbnail_log, pctOut, 16)		
+					channel_positive4 = channel_rescaled(channel_positive3, 0, 1, th_low_input, th_high_input) #normalization	                     
+					image_med = channel_positive4.median(filterSize) #median filter   
 
+					log_list.append(image_med) #for stack
+
+				elif type == "linear":
+					
+					th_low_input, th_high_input = find_P_thresholds(thumbnail_positive, pctOut, 16)		
+					channel_positive2 = channel_rescaled(channel_positive, 0, 1, th_low_input, th_high_input)	#normalise                     
+					image_med = channel_positive2.median(filterSize) #median filter   
+
+					linear_list.append(image_med) #for stack                                			
+							
 			#Descriptive statistics 2  
 			array1 = pyvips.Image.stats(image_med) #rescaled
 			array2 = array1.numpy()
 			array3 = array2[0, :] #stats for all bands together                                         
+			th_array = [th_low_input, th_high_input] #histogram thresholds
+
 			item.extend(array3) #linear/log statistics         
-
-			#Histogram thresholds  
-			th_array = [th_low_input, th_high_input]
-			item_th.extend(th_array)                 
-
-			#Saving recoloured images (for retrospective feedback): time-consuming                 
-			if save_recoloured == 1:                        
-				image_med2 = (255*image_med).cast("uchar") #uint8                      
-				
-				destFile1 = os.path.join(destDir2, f"{basename}_{type}.tif")                
-				save_recoloured_channel(image_med2, lut, destFile1)                 
+			item_th.extend(th_array)  
 
 		item1 = item + item_th #add histogram thresholds            
-		stats_list.append(item1)                     
+		stats_list.append(item1)           
 
 		#Build info table
-		stats_list2 = np.array(stats_list)                
-		stats_list3 = pd.DataFrame(stats_list2)            
-		stats_list3.columns = descriptive_cols                       
+		stats_list2 = np.array(stats_list)
+		stats_list3 = pd.DataFrame(stats_list2)
+		stats_list3.columns = descriptive_cols	
+	
+	#Save pyramids (longer processing for float)
+	for type in type_list:	
+		#as tiles
+		if type == "original": 
+			save_stack(fileList0, tileSize, destDir)
+		
+		#as montage
+		elif type == "linear":			 
+			save_transformed_stack_bigtiff(linear_list, type, tileSize, destDir)      
+		elif type == "log":
+			save_transformed_stack_bigtiff(log_list, type, tileSize, destDir)          
+
+	metadata = generate_tile_config(type_list, img_w2, img_h2, tileSize, destDir) 		
+
+	if save_recoloured == 1:
+		#save recoloured chemical maps (montages)		
+		destDir2 = os.path.join(destDir, 'recoloured_pctOut' + str(pctOut))        
+		mkdir2(destDir2)
+
+		recoloured_list = save_recoloured_stack(fileList0, type_list, linear_list, log_list,
+									lut, destDir2, max_workers=4)
+	else:
+		recoloured_list = []
+		print('Recoloured maps skipped.')	
 
 	#Save info table
 	file_name1 = os.path.join(destDir, "descriptiveStats.csv")
 	descriptiveStats = pd.concat([chosen_table, stats_list3], axis=1)    
 	descriptiveStats.to_csv(file_name1, sep=',', encoding='utf-8', index=False, header=True)
+
+	return metadata, descriptiveStats, recoloured_list
+
+
+def build_pyramids_prior(chosen_table, scale, flip_ud, type_list, workingDir_prior, filterSize, 
+						 save_recoloured, lut, tileSize, destDir):
+	#This function reproduce RGB colour schema from a previous transformation despite potentially 
+	#encountering new outlier values. It uses prior statistics from images used to calculate 
+	#a previous model (PCA, DSA, UMAP)
 	
-	#save tiles (longer processing for float)
-	for type in type_list:
-		if type == "original":
-			save_stack(fileList0, tileSize, flip_ud, destDir)
-		elif type == "linear":                  
-			save_transformed_stack(linear_list, type, tileSize, flip_ud, destDir)      
-		elif type == "log":                  
-			save_transformed_stack(log_list, type, tileSize, flip_ud, destDir)          
+	#Default
+	target_W = 5000 #same as 'img_rescaled'	
+	scale_factor = 1/scale	  
+	descriptive_cols = descriptive_colnames(type_list) #pyvips stats table  		
 
-	metadata = learn_tileConfiguration(destDir) #after saving (required)
-
-	return metadata, descriptiveStats
-
-def build_pyramids_prior(chosen_table, type_list, tileSize, filterSize, workingDir_prior, destDir, save_recoloured, flip_ud):
-	#Note: unlike build_pyramids(), this function uses the statistics from prior images used to calculate previous model
-	#This allows to fully reproduce the RGB colour schema from the colour transformation (PCA, DSA, UMAP) despite the presence of outlier values
-
+	#Load montages
 	fileList0 = chosen_table["path"]
-
+	
 	#prior
 	statsFile = os.path.join(workingDir_prior, "descriptiveStats.csv")
-	descriptiveStats = pd.read_csv(statsFile)    	
+	descriptiveStats = pd.read_csv(statsFile)    
 
-	#Preparing false-colour images
-	destDir2 = os.path.join(destDir, 'recoloured'+ '_prior')        
-	mkdir2(destDir2)
-
-	#Define colour map
-	img_indexes = pyvips.Image.identity()
-	lut = img_indexes.falsecolour() #using standard heatmap
-	#256x1 uchar, 3 bands, srgb, pngload      
-
-	#Preparing pyvips metadata table    
-	stats_cols = ['min', 'max', 'sum', 'sumOfSquares', 'mean', 'stddev', 
-						'min_x_coord', 'min_y_coord', 'max_x_coord', 'max_y_coord'] #first   
-	threshold_cols = ["th_low_input", "th_high_input"] #second
-	
-	#first
-	type_list2 = [output_type for output_type in type_list if output_type != "original"]
-	type_list3 = ["original", *type_list2]
-	stats_cols2 = [output_type + "_" + stat_type for output_type in type_list3 for stat_type in stats_cols ]
-	#second
-	threshold_cols2 = [output_type + "_" + threshold_type for output_type in type_list2 for threshold_type in threshold_cols ]
-
-	descriptive_cols = stats_cols2 + threshold_cols2
-
-	#Load montages as large stack
-	log_list = []
+	log_list = [] #for images
 	linear_list = []        
 	stats_list = [] #for csv
 	for i, filename in enumerate(fileList0):		
 		
-		descriptiveRow = descriptiveStats.iloc[i, :] #prior
-
-		basename_ext = os.path.basename(filename)
-		basename = os.path.splitext(basename_ext)[0]                                    
-		print(f"Processing {basename_ext}")                        
+		basename_ext = os.path.basename(filename)		                                 
+		print(f"Reading {basename_ext}")  
+		
+		descriptiveRow = descriptiveStats.iloc[i, :] #prior		                      
 		
 		#Load image
-		image = pyvips.Image.new_from_file(filename) 
-		
-		#Ensure layers have 1 channel
-		n_channels = image.bands
+		full_image = pyvips.Image.new_from_file(filename) 
+		img_w = full_image.width			
+		n_channels = full_image.bands
 		if n_channels > 1:
-			image = image[0]     
+			full_image = full_image[0] #1 channel only    
+
+		#Generate thumbnail 1					
+		ratio = target_W/img_w
+		image_thumbnail = full_image.resize(ratio, kernel=pyvips.Kernel.NEAREST)
 
 		#Descriptive statistics 1
-		out = pyvips.Image.stats(image)
+		out = pyvips.Image.stats(image_thumbnail)
 		out1 = out.numpy()
-		statistic_vals = out1[0, :]
+		statistic_vals = out1[0, :] #stats for all bands together 
+
+		#Downsample (performance boost)
+		if scale_factor != 1:
+			full_image = full_image.resize(scale_factor) #pyvips.Kernel.LANCZOS3 default
+		img_w2 = full_image.width
+		img_h2 = full_image.height
+
+		#Flip upside down (optional)
+		if flip_ud == 1:
+			full_image = full_image.flipver()	
 		
 		item = [] #stats table row
 		item_th = [] #th table row
 		item.extend(statistic_vals) #original (always provided)  
 
 		#Transforming input		
-		for type in type_list:
+		for type in type_list:					
 
-			#Use prior limits
-			col1 = f"original_min"
-			col2 = f"{type}_th_low_input"
-			col3 = f"{type}_th_high_input"
-			scaler_input = descriptiveRow[[col1, col2, col3]].to_numpy()	 
-			min_temp = scaler_input[0]
-			th_low_input = scaler_input[1]
-			th_high_input = scaler_input[2]
+			if type == "original":
+				continue 
+			
+			else:
+				#Capping and stretching image histogram bottom/top
 
-			image_difference = image - min_temp
-
-			if type == "log":  #natural log() 				
-				image_positive = 1 + (image_difference < 0).ifthenelse(0, image_difference)
-				image_temp = image_positive.log() 
+				#Use prior limits
+				col1 = f"original_min"
+				col2 = f"{type}_th_low_input"
+				col3 = f"{type}_th_high_input"
+				scaler_input = descriptiveRow[[col1, col2, col3]].to_numpy()	 
+				min_temp = scaler_input[0]
+				th_low_input = scaler_input[1]
+				th_high_input = scaler_input[2]	
 				
-				#Capping and stretching image histogram bottom/top                                
-				channel_positive2 = channel_rescaled(image_temp, 0, 1, th_low_input, th_high_input)	#normalise                     
-				image_med = channel_positive2.median(filterSize) #median filter   
+				image_difference = full_image - min_temp #might be very negative
 
-				log_list.append(image_med) #for stack
+				if type == "log":  #natural log() 				
+					
+					#medicine				
+					image_positive = 1 + (image_difference < 0).ifthenelse(0, image_difference)					
+					channel_positive = image_positive.log() 					
 
-			elif type == "linear":
-				image_temp = image_difference				
+					channel_positive2 = channel_rescaled(channel_positive, 0, 1, th_low_input, th_high_input)	#normalise                     
+					image_med = channel_positive2.median(filterSize) #median filter   
 
-				#Capping and stretching image histogram bottom/top                
-				channel_positive2 = channel_rescaled(image_temp, 0, 1, th_low_input, th_high_input)	#normalise                     
-				image_med = channel_positive2.median(filterSize) #median filter   
+					log_list.append(image_med) #for stack
 
-				linear_list.append(image_med) #for stack
+				elif type == "linear":								
+					
+					channel_positive2 = channel_rescaled(image_difference, 0, 1, th_low_input, th_high_input)	#normalise                     
+					image_med = channel_positive2.median(filterSize) #median filter   
 
-			elif type == "original":
-				continue                                                                                                 
+					linear_list.append(image_med) #for stack			                                                                                                  
 
 			#Descriptive statistics 2  
 			array1 = pyvips.Image.stats(image_med) #rescaled
 			array2 = array1.numpy()
 			array3 = array2[0, :] #stats for all bands together                                         
-			item.extend(array3) #linear/log statistics         
-
-			#Histogram thresholds  
 			th_array = [th_low_input, th_high_input]
-			item_th.extend(th_array)            
 
-			#Saving recoloured images (for retrospective feedback): time-consuming                 
-			if save_recoloured == 1:                        
-				image_med2 = (255*image_med).cast("uchar") #uint8                      
-				
-				destFile1 = os.path.join(destDir2, f"{basename}_{type}.tif")                
-				save_recoloured_channel(image_med2, lut, destFile1)                 
+			item.extend(array3) #linear/log statistics         
+			item_th.extend(th_array)            			             
 
 		item1 = item + item_th #add histogram thresholds            
 		stats_list.append(item1)                      
@@ -829,24 +862,36 @@ def build_pyramids_prior(chosen_table, type_list, tileSize, filterSize, workingD
 		#Build info table
 		stats_list2 = np.array(stats_list)                
 		stats_list3 = pd.DataFrame(stats_list2)            
-		stats_list3.columns = descriptive_cols                      
+		stats_list3.columns = descriptive_cols    
 
-	#Save table
-	file_name1 = os.path.join(destDir, "descriptiveStats.csv")
-	descriptiveStats = pd.concat([chosen_table, stats_list3], axis=1)    
-	descriptiveStats.to_csv(file_name1, sep=',', encoding='utf-8', index=False, header=True)
 	
 	#save tiles (longer processing for float)
 	for type in type_list:
 		if type == "original":
-			save_stack(fileList0, tileSize, flip_ud, destDir)
+			save_stack(fileList0, tileSize, destDir)
 		elif type == "linear":                  
-			save_transformed_stack(linear_list, type, tileSize, flip_ud, destDir)      
+			save_transformed_stack_bigtiff(linear_list, type, tileSize, destDir)      
 		elif type == "log":                  
-			save_transformed_stack(log_list, type, tileSize, flip_ud, destDir)      
+			save_transformed_stack_bigtiff(log_list, type, tileSize, destDir)      
 
-	metadata = learn_tileConfiguration(destDir) #after saving (required)
+	metadata = generate_tile_config(type_list, img_w2, img_h2, tileSize, destDir) 
 	
-	return metadata, descriptiveStats
+	#save montages
+	if save_recoloured == 1:
+		destDir2 = os.path.join(destDir, 'recoloured_prior')        
+		mkdir2(destDir2)	
+
+		recoloured_list = save_recoloured_stack(fileList0, type_list, linear_list, log_list,
+										  lut, destDir2, max_workers=4)
+	else:
+		recoloured_list = []
+		print('Recoloured maps skipped.')
+
+	#Save info table
+	file_name1 = os.path.join(destDir, "descriptiveStats.csv")
+	descriptiveStats = pd.concat([chosen_table, stats_list3], axis=1)    
+	descriptiveStats.to_csv(file_name1, sep=',', encoding='utf-8', index=False, header=True)
+
+	return metadata, descriptiveStats, recoloured_list
 
 #endregion

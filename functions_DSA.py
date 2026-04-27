@@ -23,15 +23,16 @@ import os
 import sys
 import time
 from tqdm import tqdm
+import gc
 
 import numpy as np
 
 import matplotlib
 #look for the cache in the EXE's temporary folder
 if getattr(sys, 'frozen', False):    
-    os.environ['MPLCONFIGDIR'] = sys._MEIPASS
+	os.environ['MPLCONFIGDIR'] = sys._MEIPASS
 else:    
-    pass #runnint in editor
+	pass #runnint in editor
 import matplotlib.pyplot as plt 
 matplotlib.style.use('ggplot')
 
@@ -54,7 +55,6 @@ else:
 	os.environ['PATH'] = os.pathsep.join((vip_dlls, os.environ['PATH']))
 
 import pyvips
-# print("vips version: " + str(pyvips.version(0))+"."+str(pyvips.version(1))+"."+str(pyvips.version(2)))
 
 import torch
 import torch.nn as nn
@@ -63,71 +63,50 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import v2
 
+worker_image_path = None #global variable
+worker_model = None
+
+def init_worker(file_path, model_path, network_nodes, device):
+	"""
+	This runs ONCE per CPU core when the pool starts.
+	"""	
+	global worker_image_path, worker_model #load locally (faster option)
+	worker_image_path = file_path
+
+	# global worker_image    
+	# worker_image = pyvips.Image.new_from_file(file_path, access="random") #jumping around x, y
+
+	#Initialize DSA per CPU
+	checkpoint = torch.load(model_path, map_location=device)
+	model = SparseAutoencoder(network_nodes).to(device)
+	model.load_state_dict(checkpoint['model_state_dict'])
+	model.eval() #inferencing mode (set dropout and batch normalisation to evaluation mode)
+	worker_model = model
+
+
 #region Input definition
 
-def incremental_loading_DSA(fileList, scale, fraction, test_ratio):
-
-	#Default    
-	scale_factor = 1/scale
-	seed_value = 0 #seed for subsetting arrays in training/test sets            
-	np.random.seed(seed_value)   
-	# torch.manual_seed(seed_value) #for reproducible training         	
-
-	#Load random sample of tile pixels for DSA	
-	tile_arrays = []
-	for file in fileList:
-   
-		image_temp = pyvips.Image.new_from_file(file) #uint8 tiles
-
-		#Downsampling
-		image_temp = image_temp.resize(scale_factor)
-
-		#To numpy matrix
-		image_np = image_temp.numpy()
-		dim_shape = image_np.shape  
-		image_xyz = np.reshape(image_np, (-1, dim_shape[2])) #39 channels
-		
-		#Subsampling
-		n_rows = image_xyz.shape[0]                
-		to_row = int(n_rows*(fraction))
-		indices = np.random.permutation(n_rows) #scrambling
-		sampling_idx = indices[:to_row]        
-					
-		image_xyz2 = image_xyz[sampling_idx, :] #selected data			
-
-		tile_arrays.append(image_xyz2)    
-	
-	#Sub-sample
-	data4 = np.concatenate([i for i in tile_arrays])
-	n_rows_sel = data4.shape[0]        
-	
-	#Dataset splitting
-	to_row = int(n_rows_sel*(1 - test_ratio))
-	indices = np.random.permutation(n_rows_sel)
-	training_idx, test_idx = indices[:to_row], indices[to_row:]
-	training_x, test_x = data4[training_idx,:], data4[test_idx,:]
-	training_y, test_y = data4[training_idx, :], data4[test_idx, :]
-
-	dataset_list = [training_x, training_y, test_x, test_y]
-
-	return dataset_list
-
 class MyDataset(Dataset): #convert numpy to tensor
-	def __init__(self, data, targets, transform=None):
-		self.data = data		
-		self.targets = targets
-		self.transform = transform
-		
-	def __getitem__(self, index): #index probably for DataLoader
-		x = self.data[index]
-		y = self.targets[index]           
-		
-		if self.transform:            			
-			x = self.data[index] #np array            
-			x = self.transform(x) #convert to a torch.FloatTensor 
-
-		return x, y
 	
+	def __init__(self, data, do_normalize= True):
+		self.data = data				
+		self.do_normalize = do_normalize
+		
+	def __getitem__(self, index): #index for DataLoader
+
+		#grab 1 pixel of n-channels
+		x = self.data[index].float() #float32 		
+		
+		#normalisation [-1, 1] range
+		if self.do_normalize:
+			x = (x - 0.5) / 0.5					
+
+		return x, x
+	
+	#loader_transform = v2.Compose([ v2.ToDtype(torch.float32, scale=False), v2.Normalize(mean=(0.5,), std= (0.5,)) ])   
+	#Note: tensors are strictly validated as images (C, H, W) by v2.Normalise and 
+	# not promoted like numpy tables		
+
 	def __len__(self):
 		return len(self.data)
 	
@@ -140,7 +119,8 @@ class BasicBlock(nn.Module):
 		super().__init__()		
 
 		self.linear0 = nn.Linear(in_features=in_channels, out_features=out_channels, bias=True)
-		self.af0 = nn.Sigmoid() #non-linear activation function (probability distribution [0-1] for sparsity term)		
+		self.af0 = nn.Sigmoid() #non-linear activation function 
+		#(probability distribution [0-1] for sparsity term)		
 
 	def forward(self, x):
 		x = self.linear0(x)
@@ -247,8 +227,9 @@ def weight_loss1(model):
  
 #region Training function
 
-def fit(model, dataloader, n_trainset, criterion, optimizer, ADD_SPARSITY, BETA, RHO, device):
-	
+def fit(model, dataloader, n_trainset, noise_value, criterion, optimizer, ADD_SPARSITY, BETA, RHO, device):
+		
+	#Train
 	model.train()
 	model_children = list(model.children()) # get the layers 				
 	
@@ -262,16 +243,23 @@ def fit(model, dataloader, n_trainset, criterion, optimizer, ADD_SPARSITY, BETA,
 		n_pixels = img.size(0)
 
 		#Cost function (tensor)
-		outputs = model(img)        
+
+		#Contractive denoising (add random noise to learn the data shape not the noise)
+		noise = torch.randn_like(img) * noise_value 
+		noisy_img = img + noise
+		noisy_img = torch.clamp(noisy_img, -1.0, 1.0)
+
+		outputs = model(noisy_img)		
 		mse_loss = criterion(outputs, img) #for loss(input, target/labels)		
+		
+		if ADD_SPARSITY == 'no': 
+			loss = mse_loss #already includes ALPHA 		
 
-		if ADD_SPARSITY == 'yes':      
+		elif ADD_SPARSITY == 'yes':      
 			kl_loss = sparse_loss2(RHO, img, model_children, device)                 
-			loss = mse_loss + BETA*kl_loss #dominated by BETA
+			loss = mse_loss + BETA*kl_loss #becomes dominated by BETA
 
-		elif ADD_SPARSITY == 'no':
-			loss = mse_loss  		
-
+		
 		#backpropagation			
 		loss.backward()  #compute gradients
 		optimizer.step() #update weights with optimiser
@@ -318,42 +306,116 @@ def validate(model, dataloader, n_testset, criterion, device):
 
 #region Launch training 
 
-def incremental_training_DSA(dataset_list, BATCH_SIZE, network_nodes, LEARNING_RATE, epoch_default, 
-							 ADD_SPARSITY, ALPHA, BETA, RHO, device, n_workers, outputFolder):
-	#Default    
-	training_x = dataset_list[0]
-	training_y = dataset_list[1] 
-	test_x = dataset_list[2]
-	test_y = dataset_list[3]     
-	
-	#pytorch dataset (already [0-1]) 	
-	loader_transform = v2.Compose([ v2.ToDtype(torch.float32, scale=False), v2.Normalize(mean=(0.5,), std= (0.5,)) ])   
+def incremental_loading_DSA(tiles_metadata, fraction, test_ratio):
 
-	trainset = MyDataset(training_x, training_y, transform= loader_transform) 
-	testset = MyDataset(test_x, test_y, transform= loader_transform)
+	#Default    	
+	n_channels = 3
+	min_required = n_channels + 1 #>3 for first partial fit
+	seed_value = 0 #seed for subsetting arrays in training/test sets            
+	np.random.seed(seed_value)   
+	# torch.manual_seed(seed_value) #for reproducible training         	
+
+	#Load stack
+	unique_file = tiles_metadata['filepath'].iloc[0]
+	full_image = pyvips.Image.new_from_file(unique_file, access="random") #jumping around x, y
+
+	#Load random sample of tile pixels
+	tile_arrays = []
+	for csv_row in tiles_metadata.itertuples():
+   
+		#Tile		
+		image_temp = full_image.crop(csv_row.pixel_x, csv_row.pixel_y, csv_row.W, csv_row.H)		
+
+		#To numpy matrix
+		image_np = image_temp.numpy()
+		h, w, bands = image_np.shape  
 	
-	#forming batches (read as iterator with step)     
-	trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=False, num_workers= n_workers)     
-	testloader = DataLoader(testset, batch_size=BATCH_SIZE, shuffle=False, num_workers= n_workers)          
+		image_xyz = np.reshape(image_np, (-1, bands)).astype(np.float32)
+		
+		del image_np
+
+		#Subsampling
+		n_rows = image_xyz.shape[0]                
+		to_row = int(n_rows*(fraction))
+
+		#medicine: ensure working with enough rows
+		if n_rows <= min_required:			
+			continue	
+		
+		to_row = max(min_required, to_row)
+		indices = np.random.permutation(n_rows) #scrambling
+		sampling_idx = indices[:to_row]        					
+		image_xyz2 = image_xyz[sampling_idx, :] #selected data			
+
+		tile_arrays.append(image_xyz2)    
+
+		del image_xyz2
+	
+	#Concatenate sub-samples
+	dataset = np.concatenate([i for i in tile_arrays])	
+	# print(dataset.shape)
+
+	#Dataset splitting
+	n_rows_sel = dataset.shape[0]        
+	to_row = int(n_rows_sel*(1 - test_ratio))
+	indices = np.random.permutation(n_rows_sel)
+	training_idx, test_idx = indices[:to_row], indices[to_row:]
+	training_x, test_x = dataset[training_idx,:], dataset[test_idx,:]	
+
+	dataset_list = [training_x, test_x]
+
+	return dataset_list
+
+def incremental_training_DSA(dataset_list, network_nodes, noise_value, criterion_type, BATCH_SIZE, LEARNING_RATE, epoch_default, 
+							 ADD_SPARSITY, ALPHA, BETA, RHO, device, n_workers, outputFolder):
+	
+	#Pytorch dataset  	
+	
+	#Data (range [0, 1]) to tensors (enables PyTorch to use shared memory pointers)
+	training_x = torch.from_numpy(dataset_list[0])	
+	test_x = torch.from_numpy(dataset_list[1])	
+
+	#Define samples [1 x n_channels] (range [-1, 1])
+	trainset = MyDataset(training_x, do_normalize= True) 
+	testset = MyDataset(test_x, do_normalize= True)
+	
+	#Form batch tensors (read as iterator with step; [BATCH_SIZE x n_channels])     
+	
+	#Speedup GPU using page-locked (pinned) memory
+	if isinstance(device, str):
+		use_pin = 'cuda' in device
+	else:
+		use_pin = device.type == 'cuda' #get_device()
+
+	trainloader = DataLoader(trainset, batch_size=BATCH_SIZE, shuffle=False, 
+						  num_workers= n_workers, pin_memory=use_pin) 
+	testloader = DataLoader(testset, batch_size=BATCH_SIZE, shuffle=False, 
+						 num_workers= n_workers, pin_memory=use_pin)          
 	n_trainset = len(trainset)
 	n_testset = len(testset)        
 
 	#Generate model
 	model = SparseAutoencoder(network_nodes).to(device)    
 	
-	optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=ALPHA) 
-	# optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE) #old
+	optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=ALPHA) 	
 
-	criterion = nn.MSELoss() #loss function mean squared error    
-	# criterion = nn.CrossEntropyLoss() #preferred for classification
+	if criterion_type == 'L1':
+		#mean absolute error preserves chemical boundaries
+		criterion = nn.L1Loss() 
+
+	elif criterion_type == 'MSE':
+		#mean squared error punishes outliers and forgives noise 
+		#Note: MSE was used in Acevedo Zamora et al. (2024)	
+		criterion = nn.MSELoss() 		
 	
+	#Training
 	start = time.time()
 	train_loss = []
 	val_loss = []    	
 	for epoch in range(epoch_default):
 		print(f"Epoch {epoch+1} of {epoch_default}")        
 		
-		train_epoch_loss = fit(model, trainloader, n_trainset, criterion, optimizer, ADD_SPARSITY, BETA, RHO, device)		
+		train_epoch_loss = fit(model, trainloader, n_trainset, noise_value, criterion, optimizer, ADD_SPARSITY, BETA, RHO, device)		
 		val_epoch_loss = validate(model, testloader, n_testset, criterion, device)
 
 		train_loss.append(train_epoch_loss)
@@ -362,14 +424,20 @@ def incremental_training_DSA(dataset_list, BATCH_SIZE, network_nodes, LEARNING_R
 	end = time.time()
 	print(f"DSA training and validation took {(end-start)/60:.3} min")
 	
-	#Save the model    
-	modelPATH = f"{outputFolder}/model_epochs{epoch_default}.tar"
+	#Saving the model    	
+	modelPATH = f"{outputFolder}/model_epochs{epoch_default}.tar" #*.tar not *.pth
 	lossPlotPATH = f"{outputFolder}/loss_plot.png"   
 
 	torch.save({'epoch': epoch, 'model_state_dict': model.state_dict(),
 			'optimizer_state_dict': optimizer.state_dict(), 'loss': train_loss}, modelPATH)   
 	
 	save_loss_plot(train_loss, val_loss, lossPlotPATH)
+
+	#Notes to fix on the next version: 
+	#Save a DSA image for each epoch during the loop execution
+	#Fix: the loss keeps decaying to a non-optimal point where DSA is noisy
+
+	return modelPATH
 
 def save_loss_plot(train_loss, val_loss, lossPlotPATH):
 	
@@ -399,8 +467,6 @@ def embedded_space(values, model_children):
 	return values 
 
 def predict_space(model, dataloader, device):
-
-	model.eval() #inferencing mode (set dropout and batch normalisation to evaluation mode)	     	
 	
 	with torch.no_grad(): #prevent gradient computations
 
@@ -422,61 +488,91 @@ def predict_space(model, dataloader, device):
 def _unpack_and_call(args):
 	return dsa_section(*args)
 
-def transform_tiles_dsa(fileList, resolution, modelPATH, network_nodes, 
-						BATCH_SIZE_pred, device, n_cores, outputFolder2):  	
-	print('Predicting tiles')
+def transform_tiles_dsa(tiles_metadata, resolution, modelPATH, network_nodes, 
+						BATCH_SIZE_pred, device, n_cores, outputFolder2):  		
 
-	#Transform each tile
+	fileList = tiles_metadata['filepath']
 	total_len = len(fileList) #number of iterations
-	args = [(file, resolution, modelPATH, network_nodes, BATCH_SIZE_pred, device, outputFolder2) for file in fileList]		
+	bigtiff_path = fileList.iloc[0] #montage
+
+	#Transform each tile	
+	args = ((csv_row, resolution, BATCH_SIZE_pred, device, outputFolder2) 
+		 for csv_row in tiles_metadata.to_dict('records'))		
 	
-	with Pool(processes= n_cores) as pool: # imap for incremental results        
-		fileList2 = list( tqdm(pool.imap(_unpack_and_call, args, chunksize=1), total= total_len, ascii=True) )	
+	#incremental results (imap)        
+	with Pool(
+		processes= n_cores,
+		initializer=init_worker, 
+		initargs=(bigtiff_path, modelPATH, network_nodes, device) #init_worker side
+		) as pool:
+		fileList2 = list( tqdm(
+			pool.imap(_unpack_and_call, args, chunksize=1), 
+			total= total_len, 
+			ascii=True
+			) )	
 
 	return fileList2
 
-def dsa_section(file, resolution, modelPATH, network_nodes, BATCH_SIZE_pred, device, outputFolder2):	         
-	#Default
-	n_channels = 3
-	n_workers_pred = 0
-	resolution_factor = 1/resolution
-
-	#Initialize    
-	checkpoint = torch.load(modelPATH, map_location=device) #dictionary containing objects
-	model_pred = SparseAutoencoder(network_nodes).to(device)
-	model_pred.load_state_dict(checkpoint['model_state_dict']) #size mismatch (if not adequate model)	
-
-	#Load tile
-	image_temp = pyvips.Image.new_from_file(file)
+def dsa_section(csv_row, resolution, BATCH_SIZE_pred, device, outputFolder2):	         
 	
+	#Default
+	n_channels = 3	
+	resolution_factor = 1/resolution
+	n_workers_pred = 0
+
+	#Tile	
+	pixel_x = csv_row['pixel_x'] #start pixel
+	pixel_y = csv_row['pixel_y']
+	W = csv_row['W'] #current_w
+	H = csv_row['H']
+	x_val = str(csv_row['x']) #col_idx
+	y_val = str(csv_row['y'])
+
+	global worker_image_path, worker_model	
+	worker_image = pyvips.Image.new_from_file(worker_image_path, access="random")
+
+	image_temp = worker_image.crop(pixel_x, pixel_y, W, H) #tile stack	
+
 	#Downsampling
-	image_temp = image_temp.resize(resolution_factor)	
+	if resolution_factor != 1:
+		image_temp = image_temp.resize(resolution_factor)
 
 	#To numpy matrix
 	image_np = image_temp.numpy()
-	dim_shape = image_np.shape  
-	image_xyz2 = np.reshape(image_np, (-1, dim_shape[2])) #e.g., 39 channels          	               	
+	h, w, bands = image_np.shape  
+	
+	image_xyz2 = image_np.reshape(-1, bands).astype(np.float32) #.astype(np.float32) 
 
-	#pytorch dataset (already [0-1])     
-	loader_transform = v2.Compose([ v2.ToDtype(torch.float32, scale=False), v2.Normalize(mean=(0.5,), std= (0.5,)) ])   
+	del image_temp 
+	del worker_image #only when using worker_image_path
+	del image_np
+	#Note: no need for normalisation, pytorch dataset (already [0-1])     
 
-	all_set = MyDataset(image_xyz2, image_xyz2, transform= loader_transform)
-	alldata_loader = DataLoader(all_set, batch_size= BATCH_SIZE_pred, num_workers= n_workers_pred)   
-	n_all_set = len(all_set)
+	#Transform
+	
+	#Pytorch dataset
+	image_tensor = torch.from_numpy(image_xyz2)
+	all_set = MyDataset(image_tensor, do_normalize= True)
+	alldata_loader = DataLoader(all_set, batch_size= BATCH_SIZE_pred, num_workers= n_workers_pred)   	
 
-	#DSA transformation
-	pixel_batch = predict_space(model_pred, alldata_loader, device) #batch list of bottleneck nodes        
+	pixel_batch = predict_space(worker_model, alldata_loader, device) #batch list of bottleneck nodes        
 	result = torch.cat(pixel_batch, dim=0)  #torch.Size([n_pixels, 3])   
 	
-	outputs = result.view(dim_shape[0], dim_shape[1], n_channels).cpu().numpy() #double
-	
-	image_output = pyvips.Image.new_from_array(outputs) #3-channel image  
-	image_output2 = image_output.cast("float") #note: 64-bit floating-point fails reload
+	del image_xyz2
+	del pixel_batch		
+
+	tile_dsa = result.view(h, w, n_channels).cpu().numpy().astype(np.float32) #double to float32	
+	tile_dsa2 = pyvips.Image.new_from_array(tile_dsa) #3-channel image  	
 
 	#output file
-	output_filename = os.path.basename(file)
+	output_filename = f"{x_val}_{y_val}.tif"
 	output_path = os.path.join(outputFolder2, output_filename)
-	image_output2.write_to_file(output_path) 
+	tile_dsa2.write_to_file(output_path) 
+
+	del result
+	del tile_dsa
+	del tile_dsa2	
+	gc.collect() #trigger cleanup
 	
 	return output_path
 

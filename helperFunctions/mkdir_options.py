@@ -14,7 +14,7 @@ def mkdir2(destDir_parent):
         os.mkdir(destDir_parent)
     else:
         basename1 = os.path.basename(destDir_parent)
-        print(f"{basename1} folder already existed.")                  
+        print(f"{basename1} folder existed.")                  
 
 #Remover version
 def mkdir1(destDir_parent):    

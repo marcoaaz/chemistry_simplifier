@@ -27,7 +27,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='Chemistry Simplifier v1',
+    name='Chemistry Simplifier v1.2',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
