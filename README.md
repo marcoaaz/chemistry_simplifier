@@ -1,33 +1,33 @@
 # Chemistry Simplifier
 # The package to process rock chemical maps as dimensionally reduced flat images in RGB while maximing the original images content of any micro-analysis technique.
 
-**Version**: 1.1  
-**Binary download**: [Executable link](https://zenodo.org/records/18706790) (for Windows 11)  
+**Version**: 1.2  
+**Binary download**: [Windows 11](https://zenodo.org/records/19688702)  
 **Author**: Dr Marco Acevedo Z. (maaz.geologia@gmail.com)  
 **Affiliation**: School of Earth and Atmospheric Sciences, Queensland University of Technology  
-**Date**: 20-February-2026  
+**Date**: 28-April-2026  
 **Citation**: [Acevedo Zamora et al. 2024](https://www.sciencedirect.com/science/article/pii/S0009254124000779#f0015)  
-**Previous repository**: [Scripts repository](https://github.com/marcoaaz/AcevedoEtAl._2024b_autoencoder)  
+**Original scripts**: [old repository](https://github.com/marcoaaz/AcevedoEtAl._2024b_autoencoder)  
 
 ---
 
 ## 📖 Overview
 
-Chemistry simplifier allows researchers to do pixel-based image analysis of full resolution micro-analysis maps (e.g., intensity from X-ray lines, mass spectrometry analytes) of any laboratory instrument into representation images using linear and non-linear dimensionality reduction. The available methods are Principal component analysis (PCA), the Uniform Manifold Approximation and Projection (UMAP), and the Symmetrical deep sparse autoencoder (DSA) neural network. The data-driven approach does not demand thinking on the input as much as reduction process parametrisation. 
+Chemistry simplifier software allows geologists to do pixel-based image analysis of full resolution micro-analysis maps (e.g., intensity from X-ray lines, mass spectrometry analytes) of any laboratory instrument into representation images using linear and non-linear dimensionality reduction. The available methods are Principal component analysis (PCA), the Uniform Manifold Approximation and Projection (UMAP), and the Symmetrical deep sparse autoencoder (DSA) neural network. The data-driven approach does not demand thinking on the input as much as reduction process parametrisation. 
 
-Colourful image outputs are rapidly produced and are much simpler to understand than the separate original inputs since they are richer in information (texture). We call them pseudo-phase maps and they can be friendlier for image segmentation with pixel classification in [QuPath](https://qupath.github.io/) ([Bankhead et al., 2017](https://www.nature.com/articles/s41598-017-17204-5)), see [pixel classifier](https://qupath.readthedocs.io/en/stable/docs/tutorials/pixel_classification.html) tool. 
+Colourful image outputs are rapidly produced and are much simpler to understand than the separate original inputs since they are richer in information (texture). We call them pseudo-phase maps and they can be friendlier for image segmentation with pixel classification of multi-channel images in [QuPath](https://qupath.github.io/) ([Bankhead et al., 2017](https://www.nature.com/articles/s41598-017-17204-5)) using the [Pixel Classifier](https://qupath.readthedocs.io/en/stable/docs/tutorials/pixel_classification.html) and [Image Combiner Warpy](https://github.com/BIOP/qupath-biop-catalog). 
 
 Locally, the output intermediate/final montages are saved in a structured folder sequence for each trial/tag combination (see interface). All processing metadata is recorded for potential future documentation in research papers. 
 
 <p align="center">
- <img width=80% height=80% alt="Image" src="https://github.com/user-attachments/assets/29ac2285-805f-4b54-812e-7ee2820c6b82" />
+ <img width=80% height=80% alt="Image" src="https://github.com/user-attachments/assets/57b38ac7-201c-4e43-80df-c3c4baed6974" />
 </p>
 
 With trialling and well-characterised samples, I demonstrated that:
- - PCA tends to focus on mineralogy while DSA is attentive to compositional zonation within crystals
- - PCA is much faster and can more robust to noisy and/or artefact image inputs than DSA  
- - UMAP is good at distinguishing mineralogy and superior at denoising the output (grain/zone boundaries) than PCA because it is a non-linear method
-   
+ - PCA can more robust to noisy and/or artefact image inputs than DSA. Therefore, PCA is the default choice (for initial assessment and image registration).  
+ - PCA tends to highlight mineralogy while DSA is attentive to mineralogy and their compositional zonation within crystals. 
+ - UMAP is good at distinguishing mineralogy and superior at denoising the output (grain/zone boundaries) than PCA because it is a non-linear method.
+ - UMAP slows down when fitting the manifold to millions of pixels, making it slower than PCA and DSA.  
 
 ---
 
@@ -80,11 +80,10 @@ The current Chemistry simplifier version was demonstrated to work on Windows 11 
 
 ## 📁 Versions Available
 
-### Cube converter v1 (main.py)
+### Chemistry Simplifier v1 (main.py)
 
-- File to call the functionality and app interface (cubeConverter_v3.py)
-- Suitable for reading and processing VSI files (CellSense format) saved from Evident VS200 slide scanner (at QUT)
-- All metadata extraction features included
+- Suitable for reading and processing chemical maps from any spectroscopy and microanalysis technique as long as they are saved as images (TIF, JPEG, PNG, etc.)
+- The internal process is recorded in metadata (fitted models, scaling parameters, element lists) for reproducibility.
   
 ---
 
@@ -106,17 +105,19 @@ The current Chemistry simplifier version was demonstrated to work on Windows 11 
 
 ## 📦 Packaged Executable
 
-- Chemistry simplifier v1.exe works for Windows 11 and it is not fully self contained (for efficiency while opening the app)
-- A Terminal will be open to indicate the progress of processing your file
-- An Error handling mechanism pops up if the user inputs a wrong value in the GUI options. For persistent errors, please, send me a screenshot
+- Chemistry simplifier v1.exe works for Windows 11 and it is not fully self contained (for efficiency while opening the app).
+- A Terminal will be open next to the main window to indicate the progress of processing your file.
+- An Error handling mechanism pops up if the user inputs a wrong value in the GUI options. For persistent errors, please, send me a screenshot.
 
 ## Issues and future work
 
-- This version can be improved with user feedback
-- You are welcome to reach out and share your developing ideas with me. Under a scientific collaboration project, I could help you design, implement, and trial new Cube converter software options.
+This version can be improved with user feedback. You are welcome to reach out and share your developing ideas with me. Under a scientific collaboration project, I could help you design, implement, and trial new Cube converter software options.
+
 - I had in mind:
-  - Cloud implementation with more processing cores  
-- Support for Mac OS and Linux 
+  - Cloud implementation with more processing cores.
+  - A checkpoint system within the GUI and process metadata to avoid recalculating the Trial folder intermediate steps (pyramid tiles, dimensionality reduction tiles)  
+
+I would welcome support for Mac OS and Linux following the original Windows version. If interested, please let me know. 
 
 ## Related papers
 
