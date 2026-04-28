@@ -13,7 +13,7 @@
 
 ## 📖 Overview
 
-Chemistry simplifier software allows geologists to do pixel-based image analysis of full resolution micro-analysis maps (e.g., intensity from X-ray lines, mass spectrometry analytes) of any laboratory instrument into representation images using linear and non-linear dimensionality reduction. The available methods are Principal component analysis (PCA), the Uniform Manifold Approximation and Projection (UMAP), and the Symmetrical deep sparse autoencoder (DSA) neural network. The data-driven approach does not demand thinking on the input as much as reduction process parametrisation. 
+Chemistry simplifier software allows geologists to do pixel-based image analysis of full resolution micro-analysis maps (e.g., intensity from X-ray lines, mass spectrometry analytes) of any laboratory instrument into representation images using linear and non-linear dimensionality reduction. The available methods are Principal component analysis (PCA), the Uniform Manifold Approximation and Projection (UMAP), and the Deep sparse autoencoder (DSA) neural network. The data-driven approach focuses on the reduction process parametrisation and lesens the focus on interpreting the input images. 
 
 Colourful image outputs are rapidly produced and are much simpler to understand than the separate original inputs since they are richer in information (texture). We call them pseudo-phase maps and they can be friendlier for image segmentation with pixel classification of multi-channel images in [QuPath](https://qupath.github.io/) ([Bankhead et al., 2017](https://www.nature.com/articles/s41598-017-17204-5)) using the [Pixel Classifier](https://qupath.readthedocs.io/en/stable/docs/tutorials/pixel_classification.html) and [Image Combiner Warpy](https://github.com/BIOP/qupath-biop-catalog). 
 
@@ -28,6 +28,8 @@ With trialling and well-characterised samples, I demonstrated that:
  - PCA tends to highlight mineralogy while DSA is attentive to mineralogy and their compositional zonation within crystals. 
  - UMAP is good at distinguishing mineralogy and superior at denoising the output (grain/zone boundaries) than PCA because it is a non-linear method.
  - UMAP slows down when fitting the manifold to millions of pixels, making it slower than PCA and DSA.  
+
+The image alignment options require control points that have been placed manually using ImageJ BigWarp plugin ([Bogovic et al., 2016](https://imagej.net/plugins/bigwarp)). The plugin allows exporting a 'landmarks.csv' file containing the ID and locations (X, Y) of the placemarks accross the moving and fixed images (at least 4 points are required to fit the transform models). This repository contains an example CSV to show the user for required format (see 'landmarks_bse_xpl.csv').
 
 ---
 
@@ -72,7 +74,7 @@ The current Chemistry simplifier version was demonstrated to work on Windows 11 
         ],
     hiddenimports=['numba.core.runtime', 'numba.core.registry'],
         
-- **pyvips requires internally defining the path to libvips binaries (Windows DLL) in your PC. I downloaded the folder from [link](https://github.com/libvips/build-win64-mxe/releases/tag/v8.16.0) and unzipped to 'c:/vips-dev-8.16/bin'
+- **pyvips** requires internally defining the path to libvips binaries (Windows DLL) in your PC. I downloaded the folder from [link](https://github.com/libvips/build-win64-mxe/releases/tag/v8.16.0) and unzipped to 'c:/vips-dev-8.16/bin'
 
 
 
